@@ -325,6 +325,10 @@ static inline int64_t mm_parse_num(const char *str)
 }
 
 int main(int argc, char **argv){
+
+	lt_timer_init();
+	lt_timer_start(0);
+
 	Graph *g;
 	KBMPar *par;
 	KBM *kbm;
@@ -1060,5 +1064,7 @@ int main(int argc, char **argv){
 	free_graph(g);
 	fprintf(KBM_LOGF, "[%s] Program Done\n", date());
 	END_STAT_PROC_INFO(stderr);
+	lt_timer_stop(0);
+	lt_timer_finalize();
 	return 0;
 }

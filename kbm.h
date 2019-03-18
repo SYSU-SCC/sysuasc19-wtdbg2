@@ -634,6 +634,7 @@ pthread_mutex_t *locks;
 thread_end_def(midx);
 
 thread_beg_func(midx);
+lt_timer_start(3);
 KBM *kbm;
 kbm_bin_t *bin;
 kbmmidxv **kidxs;
@@ -898,6 +899,7 @@ free_kmeroffv(kmers[1]);
 for(i=0;i<KBM_N_HASH;i++) free_kbmmidxv(kidxs[i]);
 free(kidxs);
 free_tmpbmerv(bms);
+lt_timer_stop(3);
 thread_end_func(midx);
 
 static inline void index_kbm(KBM *kbm, u8i beg, u8i end, u4i ncpu, FILE *kmstat){

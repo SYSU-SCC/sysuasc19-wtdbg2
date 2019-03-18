@@ -652,6 +652,7 @@ int task;
 thread_end_def(mdbg);
 
 thread_beg_func(mdbg);
+lt_timer_start(2);
 Graph *g;
 KBM *kbm;
 KBMAux *aux;
@@ -672,19 +673,31 @@ thread_beg_loop(mdbg);
 if(mdbg->task == 1){
 	if(reg->closed) continue;
 	if(g->corr_mode){
-		if(map_kbmpoa(mdbg->cc, aux, kbm->reads->buffer[reg->rid].tag, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg, g->corr_min, g->corr_max, g->corr_cov, NULL) == 0){
+		lt_timer_start(4);
+		int lt_mid =map_kbmpoa(mdbg->cc, aux, kbm->reads->buffer[reg->rid].tag, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg, g->corr_min, g->corr_max, g->corr_cov, NULL);
+		lt_timer_stop(4);
+		if( lt_mid == 0){
+			lt_timer_start(5);
 			clear_kbmmapv(aux->hits);
+			lt_timer_stop(5);
 		}
 	} else {
+		lt_timer_start(6);
 		query_index_kbm(aux, NULL, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg);
+		lt_timer_stop(6);
+		lt_timer_start(7);
 		map_kbm(aux);
+		lt_timer_stop(7);
 	}
+	lt_timer_start(8);
 	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(b.mat, a.mat));
+	lt_timer_stop(8);
 }
 thread_end_loop(mdbg);
 free_u4v(maps[0]);
 free_u4v(maps[1]);
 free_u4v(maps[2]);
+lt_timer_stop(2);
 thread_end_func(mdbg);
 
 typedef struct {
