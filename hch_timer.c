@@ -25,46 +25,59 @@
 
 
 // //hch intel timer
-// #define MAX_HCH_TIMER_LEN 288
-// #define HCH_TIMER_CNT 20
-
-// // #if defined (__i386__)
-// // #define LT_CCPSS 2900000000
-// // static __inline__ unsigned long long GetCycleCount(void)
-// // {
-// //         unsigned long long int x;
-// //         __asm__ volatile("rdtsc":"=A"(x));
-// //         return x;
-// // }
-// // #elif defined (__x86_64__)
-// // #define HCH_CC_TYPE unsigned long long
-// // #define LT_CCPSS 2900000000
-// // static __inline__ unsigned long long GetCycleCount(void)
-// // {
-// //         unsigned hi,lo;
-// //         __asm__ volatile("rdtsc":"=a"(lo),"=d"(hi));
-// //         return ((unsigned long long)lo)|(((unsigned long long)hi)<<32);
-// // }
-// // #elif (defined SW2) || (defined SW5)
-// // #define HCH_CC_TYPE unsigned long
-// // #define LT_CCPSS 1450000000
-// // static __inline__ unsigned long GetCycleCount(void)
-// // {
-// //     unsigned long time;
-// //     asm("rtc %0": "=r" (time) : );
-// //     return time;
-// // }
-// // #endif
-
+#if defined (__i386__)
+#define HCH_CC_TYPE unsigned long long
+#define CCPS 2900000000
+static __inline__ unsigned long long GetCycleCount(void)
+{
+        unsigned long long int x;
+        __asm__ volatile("rdtsc":"=A"(x));
+        return x;
+}
+#elif defined (__x86_64__)
+#define HCH_CC_TYPE unsigned long long
+#define CCPS 2900000000
+static __inline__ unsigned long long GetCycleCount(void)
+{
+        unsigned hi,lo;
+        __asm__ volatile("rdtsc":"=a"(lo),"=d"(hi));
+        return ((unsigned long long)lo)|(((unsigned long long)hi)<<32);
+}
+#elif (defined SW2) || (defined SW5)
 #define HCH_CC_TYPE unsigned long
-static __inline__ unsigned long getmsTime(void)
+#define CCPS 1450000000
+static __inline__ unsigned long GetCycleCount(void)
+{
+    unsigned long time;
+    asm("rtc %0": "=r" (time) : );
+    return time;
+}
+#endif
+
+// #define HCH_CC_TYPE unsigned long
+static __inline__ HCH_CC_TYPE getmsTime(void)
+{
+    // struct timeval tv;
+    // gettimeofday(&tv,NULL);
+    // // printf("second:%ld\n",tv.tv_sec);  //秒
+    // // printf("millisecond:%ld\n",tv.tv_sec*1000 + tv.tv_usec/1000);  //毫秒
+    // // printf("microsecond:%ld\n",tv.tv_sec*1000000 + tv.tv_usec);  //微秒
+    // unsigned long time = tv.tv_sec*1000 + tv.tv_usec ;
+    // unsigned long time = tv.tv_sec*1000000 + tv.tv_usec;
+    // asm("rtc %0": "=r" (time) : );
+    
+    return GetCycleCount();
+}
+
+static __inline__ HCH_CC_TYPE getusTime(void)
 {
     struct timeval tv;
     gettimeofday(&tv,NULL);
     // printf("second:%ld\n",tv.tv_sec);  //秒
     // printf("millisecond:%ld\n",tv.tv_sec*1000 + tv.tv_usec/1000);  //毫秒
     // printf("microsecond:%ld\n",tv.tv_sec*1000000 + tv.tv_usec);  //微秒
-    unsigned long time = tv.tv_sec*1000 + tv.tv_usec/1000;
+    // unsigned long time = tv.tv_sec*1000 + tv.tv_usec ;
+    HCH_CC_TYPE time = tv.tv_sec*1000 + tv.tv_usec;
     // asm("rtc %0": "=r" (time) : );
     return time;
 }
@@ -219,11 +232,22 @@ void lt_timer_init(){
 }
 
 void lt_timer_start(int num){
-    timer_temp_cc[num]=getmsTime();
+    timer_temp_cc[num]=GetCycleCount();
+    // if(num != 8)
+    //     timer_temp_cc[num]=getmsTime();
+    // else{
+    //     timer_temp_cc[num]=getusTime();
+            
+    // }
+
 }
 
 void lt_timer_stop(int num){
-    timer_cc[num] = getmsTime() - timer_temp_cc[num];
+    timer_cc[num] = GetCycleCount() - timer_temp_cc[num];
+    // printf("%0.4f\n", GetCycleCount() - timer_temp_cc[num]);
+    if(num == 8){
+        printf("%0.4f\n", (GetCycleCount() - timer_temp_cc[num])*1000.0/CCPS);
+    }
 }
 
 void lt_timer_finalize(){
@@ -231,7 +255,7 @@ void lt_timer_finalize(){
     printf("hch_timer_finalize_\n");
     FILE * fp;
     fp = fopen ("hch_timer_profile.csv", "w");
-    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func");
+    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func, map_kbmpoa, clear_kbmmapv, query_index_kbm, map_kbm, sort_array");
     fprintf(fp, "\n");
     
     // printf("%d,", my_rank);
@@ -239,7 +263,7 @@ void lt_timer_finalize(){
     for(j = 0; j < timer_num; j++)
     {
         // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
-        fprintf(fp, "%.4f,", timer_cc[j] * 1.0 / 1000 );
+        fprintf(fp, "%.4f,", timer_cc[j] * 1.0 / CCPS );
     }
 
     fprintf(fp, "\n");
