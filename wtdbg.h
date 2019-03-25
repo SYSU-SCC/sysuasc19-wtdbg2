@@ -696,9 +696,8 @@ if(mdbg->task == 1){
     //     printf("%d ", aux->hits->buffer[c1].mat);
     // }
     // printf("\n");
-	// lt_print(aux->hits->buffer, aux->hits->size);
-	// sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(b.mat, a.mat));
-	lt_print(aux->hits->buffer, aux->hits->size,0);
+	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(b.mat, a.mat));
+	// lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size,0);
 
 	// printf("after:");
 	// for(c1=0;c1<aux->hits->size;c1++){

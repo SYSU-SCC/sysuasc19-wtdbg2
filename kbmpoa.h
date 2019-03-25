@@ -87,6 +87,7 @@ static inline void reset_kbmblock(KBMBlock *kb, char *rdtag, u4i chridx, BaseBan
 	kb->sidx = MAX_U4;
 	kb->lidx  = MAX_U4;
 	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(a.qb, b.qb));
+	// lt_sort_kbm_map_t_qb(aux->hits->buffer, aux->hits->size,1);
 	kb->hidx  = 0;
 	stop = pop_layseqr(kb->seqs);
 	stop->chridx = chridx + 1;

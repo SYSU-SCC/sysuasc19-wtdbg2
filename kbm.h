@@ -1,5 +1,4 @@
 /*
- *
  * Copyright (c) 2011, Jue Ruan <ruanjue@gmail.com>
  *
  *
@@ -404,6 +403,7 @@ static inline u8i filter_reads_kbm(KBM *kbm, u8i retain_size, int strategy){
 	if((kbm->flags & 0x2) == 0){
 		if(kbm->par->rd_len_order){
 			sort_array(kbm->reads->buffer, kbm->reads->size, kbm_read_t, num_cmpgt(b.rdlen, a.rdlen));
+			// lt_sort_kbm_read_t_rdlen(kbm->reads->buffer, kbm->reads->size, 0);
 			if(strategy == 0){ // longest
 				len = 0;
 				for(e=0;e<kbm->reads->size;e++){
@@ -443,6 +443,7 @@ static inline void ready_kbm(KBM *kbm){
 	if((kbm->flags & 0x2) == 0){
 		if(kbm->par->rd_len_order){
 			sort_array(kbm->reads->buffer, kbm->reads->size, kbm_read_t, num_cmpgt(b.rdlen, a.rdlen));
+			// lt_sort_kbm_read_t_rdlen(kbm->reads->buffer, kbm->reads->size, 0);
 		}
 		encap_basebank(kbm->rdseqs, KBM_BSIZE);
 	}
@@ -876,6 +877,8 @@ if(midx->task == 1){
 				push_tmpbmerv(bms, (kbm_tmp_bmer_t){getval_bidx(kbm, x->off + j), kbm->sauxs->buffer[x->off + j]});
 			}
 			sort_array(bms->buffer, bms->size, kbm_tmp_bmer_t, num_cmpgt(a.bidx, b.bidx));
+			// lt_sort_kbm_tmp_bmer_t_bidx(bms->buffer, bms->size, 1);
+
 			kbm->seeds->buffer[x->off + 0].bidx = bms->buffer[0].bidx & MAX_U4;
 			kbm->sauxs->buffer[x->off + 0].bidx = bms->buffer[0].bidx >> 32;
 			kbm->sauxs->buffer[x->off + 0]      = bms->buffer[0].aux;
@@ -1335,6 +1338,8 @@ static inline void query_index_kbm(KBMAux *aux, char *qtag, u4i qidx, BaseBank *
 	if(par->self_aln && aux->solids){
 		// Obsolete
 		sort_array(aux->refs->buffer, aux->refs->size, kbm_ref_t, num_cmpgt(a.off, b.off));
+		// lt_sort_kbm_ref_t_off(aux->refs->buffer, aux->refs->size,1);
+		
 		tot = 0;
 		next = 0;
 		for(i=0;i<aux->refs->size;i++){
@@ -1353,6 +1358,8 @@ static inline void query_index_kbm(KBMAux *aux, char *qtag, u4i qidx, BaseBank *
 		}
 	} else if(aux->par->ksampling < KBM_BIN_SIZE && aux->refs->size){
 		sort_array(aux->refs->buffer, aux->refs->size, kbm_ref_t, num_cmpgtx(a.qbidx, b.qbidx, b.bend - b.boff, a.bend - a.boff));
+		// lt_sort_kbm_ref_t_qbidx(aux->refs->buffer, aux->refs->size,1);
+
 		tot = 0;
 		for(i=j=0;i<aux->refs->size;i++){
 			if(aux->refs->buffer[i].qbidx != aux->refs->buffer[j].qbidx){
@@ -1375,6 +1382,8 @@ static inline void query_index_kbm(KBMAux *aux, char *qtag, u4i qidx, BaseBank *
 		//sort_array(aux->refs->buffer, aux->refs->size, kbm_ref_t, num_cmpgt(a.off, b.off));
 	}
 	sort_array(aux->refs->buffer, aux->refs->size, kbm_ref_t, num_cmpgt(a.off, b.off));
+	// lt_sort_kbm_ref_t_off(aux->refs->buffer, aux->refs->size,1);
+	
 	// estimate binmap
 	aux->bmoff = 0;
 	if(aux->refs->size){
@@ -1955,12 +1964,14 @@ static inline void map_kbm(KBMAux *aux){
 				if(aux->caches[0]->size * (aux->par->ksize + aux->par->psize) < UInt(aux->par->min_mat)){
 					aux->caches[0]->size = 0;
 				} else {
-					sort_array(aux->caches[0]->buffer, aux->caches[0]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
+					// sort_array(aux->caches[0]->buffer, aux->caches[0]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
+					lt_sort_kbm_dpe_t(aux->caches[0]->buffer, aux->caches[0]->size,0);
 				}
 				if(aux->caches[1]->size * (aux->par->ksize + aux->par->psize) < UInt(aux->par->min_mat)){
 					aux->caches[1]->size = 0;
 				} else {
 					sort_array(aux->caches[1]->buffer, aux->caches[1]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
+					// lt_sort_kbm_dpe_t(aux->caches[1]->buffer, aux->caches[1]->size,0);
 				}
 					//sort_array(aux->caches[0]->buffer, aux->caches[0]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
 					//sort_array(aux->caches[1]->buffer, aux->caches[1]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
@@ -2013,6 +2024,8 @@ static inline int simple_chain_all_maps_kbm(kbm_map_t *srcs, u4i size, BitsVec *
 	u4i i, x, y, z, f;
 	if(size < 2) return 0;
 	sort_array(srcs, size, kbm_map_t, num_cmpgt(a.tb, b.tb));
+	// lt_sort_kbm_map_t_tb(srcs, size,1);
+
 	*dst = srcs[0];
 	dst->cgoff = dst_cigars->size;
 	append_bitsvec(dst_cigars, src_cigars, srcs[0].cgoff, srcs[0].cglen);
