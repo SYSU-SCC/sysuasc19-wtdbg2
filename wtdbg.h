@@ -1535,7 +1535,9 @@ void lt_hitresult(lt_arg_struct * lt_arg){
 	u8i *nhit=lt_arg->nhit;
 	BufferedWriter* bw=lt_arg->bw;
 
-	printf("mdbg: %d", 18);
+	printf("mdbg: %d\n", 18);
+	printf("bw: %p\n", bw);
+	printf("out: %p\n", bw->out);
 	int i=0;
 	if(mdbg->reg.closed == 0){
 		KBMAux *aux = mdbg->aux;
