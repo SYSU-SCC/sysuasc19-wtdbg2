@@ -86,8 +86,11 @@ static inline void reset_kbmblock(KBMBlock *kb, char *rdtag, u4i chridx, BaseBan
 	clear_u4v(kb->heap);
 	kb->sidx = MAX_U4;
 	kb->lidx  = MAX_U4;
+#ifndef LT_STLSORT_ALL
 	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(a.qb, b.qb));
-	// lt_sort_kbm_map_t_qb(aux->hits->buffer, aux->hits->size,1);
+#else
+	lt_sort_kbm_map_t_qb(aux->hits->buffer, aux->hits->size,1);
+#endif
 	kb->hidx  = 0;
 	stop = pop_layseqr(kb->seqs);
 	stop->chridx = chridx + 1;
@@ -293,7 +296,7 @@ static inline lay_seq_t* iter_kbmblock(void *obj){
 				array_heap_push(kb->heap->buffer, kb->heap->size, kb->heap->cap, u4i, offset_layseqr(kb->seqs, sc),
 					num_cmpx(ref_layseqr(kb->seqs, a)->bidx, ref_layseqr(kb->seqs, b)->bidx, ref_layseqr(kb->seqs, a)->rdidx, ref_layseqr(kb->seqs, b)->rdidx));
 			}
-		}
+		} 
 		if(kb->heap->size == 0) break;
 		if(kb->lidx != MAX_U4){
 			sl = ref_layseqr(kb->seqs, kb->lidx);

@@ -1,5 +1,5 @@
 /*
- *
+ * 
  * Copyright (c) 2011, Jue Ruan <ruanjue@gmail.com>
  *
  *
@@ -638,6 +638,11 @@ static inline int hit2rdregs_graph(Graph *g, rdregv *regs, int qlen, kbm_map_t *
 	return !mask;
 }
 
+typedef struct{
+	Graph *g; struct mdbg_struct * mdbg; BitsVec* rdflags; kbm_map_t* hit; FILE* alno; u8i *nhit; BufferedWriter* bw
+}lt_arg_struct;
+
+
 thread_beg_def(mdbg);
 Graph *g;
 KBMAux *aux;
@@ -649,10 +654,14 @@ u4i beg, end;
 int raw;
 FILE *alno;
 int task;
+lt_arg_struct* lt_arg;
 thread_end_def(mdbg);
 
 thread_beg_func(mdbg);
-lt_timer_start(2);
+#ifdef LT_TIMER
+if(mdbg->t_idx == 0)
+	lt_timer_start(2);
+#endif
 Graph *g;
 KBM *kbm;
 KBMAux *aux;
@@ -671,47 +680,41 @@ maps[1] = init_u4v(32);
 maps[2] = init_u4v(32);
 thread_beg_loop(mdbg);
 if(mdbg->task == 1){
+	// if(mdbg->t_idx == 0)
+	// 	lt_timer_start(8); 
+	// printf("tidx:%d\n", mdbg->t_idx);
+	// printf("rid:%d\n", reg->rid);
 	if(reg->closed) continue;
 	if(g->corr_mode){
-		// lt_timer_start(4);
-		int lt_mid =map_kbmpoa(mdbg->cc, aux, kbm->reads->buffer[reg->rid].tag, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg, g->corr_min, g->corr_max, g->corr_cov, NULL);
-		// lt_timer_stop(4);
-		if( lt_mid == 0){
-			// lt_timer_start(5);
+		if(map_kbmpoa(mdbg->cc, aux, kbm->reads->buffer[reg->rid].tag, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg, g->corr_min, g->corr_max, g->corr_cov, NULL) == 0){
 			clear_kbmmapv(aux->hits);
-			// lt_timer_stop(5);
 		}
 	} else {
-		// lt_timer_start(6);
 		query_index_kbm(aux, NULL, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg);
-		// lt_timer_stop(6);
-		// lt_timer_start(7);
 		map_kbm(aux);
-		// lt_timer_stop(7);
 	}
-	lt_timer_start(8);
-	// int c1=0;
-	// printf("before:");
-	// for(c1=0;c1<aux->hits->size;c1++){
-    //     printf("%d ", aux->hits->buffer[c1].mat);
-    // }
-    // printf("\n");
+#ifndef LT_STLSORT
 	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(b.mat, a.mat));
-	// lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size,0);
+#else
+	lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size,0);
+#endif
+	// if(mdbg->t_idx == 0)
+	// 	lt_timer_stop(8);  
+#ifdef LT_HIT
+	mdbg->lt_arg->mdbg = mdbg;
+	mdbg->lt_arg->g = g;
+	lt_hitresult(mdbg->lt_arg);
+#endif
 
-	// printf("after:");
-	// for(c1=0;c1<aux->hits->size;c1++){
-    //     printf("%d ", aux->hits->buffer[c1].mat);
-    // }
-    // printf("\n");
-	// lt_sort(aux->hits->buffer, aux->hits->size, true);
-	lt_timer_stop(8);
 }
 thread_end_loop(mdbg);
 free_u4v(maps[0]);
 free_u4v(maps[1]);
 free_u4v(maps[2]);
-lt_timer_stop(2);
+#ifdef LT_TIMER
+if(mdbg->t_idx == 0)
+	lt_timer_stop(2);
+#endif
 thread_end_func(mdbg);
 
 typedef struct {
@@ -1322,6 +1325,12 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 		end_bufferedwriter(bw);
 	}
 	rdflags = (!g->corr_mode && g->par->skip_contained)? init_bitvec(g->kbm->reads->size) : NULL;
+	// g->corr_mode 为 false , rdflags 都不是null
+	//raw == 0
+	// KBM_LOG false
+	// alno true
+	// if(alno)
+	// 	printf("hahha\n");
 	thread_beg_init(mdbg, n_cpu);
 	mdbg->g = g;
 	memset((void*)&mdbg->reg, 0, sizeof(reg_t));
@@ -1347,6 +1356,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	mdbg->raw = raw;
 	mdbg->alno = alno;
 	thread_end_init(mdbg);
+	// if(mdbg->t_idx == 0)
+	// 	lt_timer_start(8); 
 	nbp = ((u8i)(ie - ib)) * KBM_BSIZE;
 	if(g->kbm->seeds->size == 0){
 		reset_index_kbm(g->kbm);
@@ -1394,12 +1405,26 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			fclose(kmlog);
 		}
 	}
+	// if(mdbg->t_idx == 0)
+	// 	lt_timer_stop(8);  
 	nhit = 0;
 	{
 		thread_beg_iter(mdbg);
 		mdbg->task = 1;
 		thread_end_iter(mdbg);
+
+#ifdef LT_TASK_REVERSE
+		int rrid = 0;
+		for(rrid = qb;rrid<=qe+ncpu;rrid++){
+			// index change 
+			if(rrid - qb > ncpu && rrid < qe){
+				rid = qe - rrid + qb + ncpu;
+			}else{
+				rid = rrid;
+			}
+#else
 		for(rid=qb;rid<=qe+ncpu;rid++){
+#endif
 			if(rid < qe){
 				if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
 				thread_wait_one(mdbg);
@@ -1407,6 +1432,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				thread_wait_next(mdbg);
 				pb = NULL;
 			}
+			// if(mdbg->t_idx == 0)
+				lt_timer_start(8);
+#ifndef LT_HIT
 			if(mdbg->reg.closed == 0){
 				KBMAux *aux = mdbg->aux;
 				if(g->corr_mode && mdbg->cc->cns->size){
@@ -1435,6 +1463,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						one_bitvec(rdflags, hit->tidx);
 					}
 				}
+				
 				if(g->chainning_hits){
 					chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 				}
@@ -1464,6 +1493,12 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				}
 				mdbg->reg.closed = 1;
 			}
+#else
+			lt_arg_struct arg = (lt_arg_struct){g, mdbg, rdflags, hit, alno, &nhit, bw};
+			mdbg->lt_arg = &arg;
+#endif
+			// if(mdbg->t_idx == 0)
+				lt_timer_stop(8); 
 			if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
 				pb = ref_kbmreadv(g->kbm->reads, rid);
 				mdbg->reg = (reg_t){0, rid, 0, 0, pb->rdlen, 0, 0};
@@ -1487,6 +1522,80 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 		reset_index_kbm(g->kbm);
 	}
 	return nhit;
+}
+
+// static inline 
+void lt_hitresult(lt_arg_struct * lt_arg){
+	// lt_arg_struct* lt_arg = (lt_arg_struct*) arg; 
+	Graph *g =lt_arg->g;
+	struct mdbg_struct * mdbg=lt_arg->mdbg;
+	BitsVec* rdflags=lt_arg->rdflags;
+	kbm_map_t* hit=lt_arg->hit;
+	FILE* alno=lt_arg->alno;
+	u8i *nhit=lt_arg->nhit;
+	BufferedWriter* bw=lt_arg->bw;
+
+	printf("mdbg: %d", 18);
+	int i=0;
+	if(mdbg->reg.closed == 0){
+		KBMAux *aux = mdbg->aux;
+		if(g->corr_mode && mdbg->cc->cns->size){
+			g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
+		}
+		if(alno){
+			beg_bufferedwriter(bw);
+			if(g->corr_mode && mdbg->cc->cns->size){
+				fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
+				println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+			}
+			for(i=0;i<mdbg->aux->hits->size;i++){
+				hit = ref_kbmmapv(mdbg->aux->hits, i);
+				fprint_hit_kbm(mdbg->aux, i, bw->out);
+			}
+			
+			end_bufferedwriter(bw);
+		}
+		for(i=0;i<mdbg->aux->hits->size;i++){
+			hit = ref_kbmmapv(mdbg->aux->hits, i);
+			if(hit->mat == 0) continue;
+			if(rdflags
+				&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
+				&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
+				&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
+				){
+				one_bitvec(rdflags, hit->tidx);
+			}
+		}
+		
+		if(g->chainning_hits){
+			chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
+		}
+		for(i=0;i<aux->hits->size;i++){
+			hit = ref_kbmmapv(aux->hits, i);
+			if(hit->mat == 0) continue;
+			//hit->qb  /= KBM_BIN_SIZE;
+			//hit->qe  /= KBM_BIN_SIZE;
+			//hit->tb  /= KBM_BIN_SIZE;
+			//hit->te  /= KBM_BIN_SIZE;
+			//hit->aln /= KBM_BIN_SIZE;
+			(*nhit) ++;
+			append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
+			hit->cgoff = g->cigars->size - hit->cglen;
+			// if(raw){
+			// 	hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
+			// } else {
+				map2rdhits_graph(g, hit);
+			// }
+		}
+		// if(KBM_LOG){
+		// 	fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
+		// 	for(i=0;i<mdbg->aux->hits->size;i++){
+		// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
+		// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
+		// 	}
+		// }
+		mdbg->reg.closed = 1;
+	}
 }
 
 static inline void build_nodes_graph(Graph *g, u8i maxbp, int ncpu, FileReader *pws, int rdclip, char *prefix, char *dump_kbm){
@@ -1598,6 +1707,7 @@ static inline void build_nodes_graph(Graph *g, u8i maxbp, int ncpu, FileReader *
 	}
 	// generating nodes
 	fprintf(KBM_LOGF, "[%s] sorting regs ... ", date()); fflush(KBM_LOGF);
+	// printf("size: %d\n", regs->size);
 	psort_array(regs->buffer, regs->size, rd_reg_t, ncpu, num_cmpgtxx((a.node << 30) | a.rid, (b.node << 30) | b.rid, a.beg, b.beg, b.end, a.end));
 	fprintf(KBM_LOGF, " Done\n"); fflush(KBM_LOGF);
 	rank = 0xFFFFFFFFFFFFFFFFLLU;
@@ -1627,6 +1737,7 @@ static inline void build_nodes_graph(Graph *g, u8i maxbp, int ncpu, FileReader *
 			//nd->score += (regs->buffer[idx].beg >= g->reads->buffer[regs->buffer[idx].rid].clps[0] && regs->buffer[idx].end <= g->reads->buffer[regs->buffer[idx].rid].clps[1]);
 		}
 	}
+	// printf("size: %d\n", nds->size);
 	psort_array(nds->buffer, nds->size, rnk_ref_t, ncpu, num_cmpgtx(b.cnt, a.cnt, a.rank, b.rank));
 	fprintf(KBM_LOGF, " %llu intervals\n", (u8i)nds->size); fflush(KBM_LOGF);
 	//psort_array(nds->buffer, nds->size, rnk_ref_t, ncpu, num_cmpgtx(b.score, a.score, a.rank, b.rank));
@@ -1839,6 +1950,7 @@ static inline void build_edges_graph(Graph *g, int ncpu, FILE *log){
 		free_edgeoffv(offs);
 		return;
 	}
+	// printf("size: %d\n", offs->size);
 	psort_array(offs->buffer, offs->size, edge_off_t, ncpu, num_cmpgtx(a.idx, b.idx, a.off, b.off));
 	lst = 0;
 	for(idx=1;idx<=offs->size;idx++){

@@ -245,9 +245,9 @@ void lt_timer_start(int num){
 void lt_timer_stop(int num){
     timer_cc[num] = GetCycleCount() - timer_temp_cc[num];
     // printf("%0.4f\n", GetCycleCount() - timer_temp_cc[num]);
-    if(num == 8){
-        printf("%0.4f\n", (GetCycleCount() - timer_temp_cc[num])*1000.0/CCPS);
-    }
+    // if(num == 8){
+    //     printf("%.4f\n", (GetCycleCount() - timer_temp_cc[num])*1000.0/CCPS);
+    // }
 }
 
 void lt_timer_finalize(){
@@ -255,7 +255,7 @@ void lt_timer_finalize(){
     printf("hch_timer_finalize_\n");
     FILE * fp;
     fp = fopen ("hch_timer_profile.csv", "w");
-    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func, map_kbmpoa, clear_kbmmapv, query_index_kbm, map_kbm, sort_array");
+    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func, psort, clear_kbmmapv, query_index_kbm, map_kbm, sort_array");
     fprintf(fp, "\n");
     
     // printf("%d,", my_rank);

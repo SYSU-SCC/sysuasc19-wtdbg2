@@ -1,7 +1,7 @@
 VERSION=2.3
 
-CC  := icc
-CX := icc
+CC  := gcc
+CX := gcc
 BIN := /usr/local/bin
 
 ifeq (0, ${MAKELEVEL})
@@ -11,8 +11,10 @@ endif
 ifeq (1, ${DEBUG})
 CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O0 -DDEBUG=1 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2
 else
-CFLAGS=-g3 -w -Wno-unused-but-set-variable -O4 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2
+CFLAGS=-g -w -Wno-unused-but-set-variable -O3 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2
 endif
+CFLAGS+= -DLT_TIMER -DLT_STLSORT -DLT_HIT
+# -DLT_TASK_REVERSE
 
 GLIBS=-lm -lrt -lpthread -lz  -L./ -llt_sort
 GENERIC_SRC=mem_share.h chararray.h sort.h list.h pgzf.h  sort.h list.h dna.h thread.h filereader.h filewriter.h bitvec.h bit2vec.h bitsvec.h hashset.h
@@ -37,7 +39,7 @@ pgzf: mem_share.h sort.h list.h thread.h pgzf.h pgzf.c hch_timer.c hch_timer.h
 	$(CC) $(CFLAGS) -o $@ pgzf.c hch_timer.c $(GLIBS)
 
 lt_sort.o:lt_sort.cpp
-	$(CX) $(CFLAGS) -c lt_sort.cpp -lm -lrt -lpthread -lz -std=c++14
+	$(CX) $(CFLAGS) -c lt_sort.cpp -lm -lrt -lpthread -lz -std=c++11
 
 ltsort.a:lt_sort.o
 	ar -crv liblt_sort.a lt_sort.o

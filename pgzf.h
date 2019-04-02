@@ -313,7 +313,9 @@ int pgzf_inflate_core(u1i *dst, u4i *dlen, u1i *src, u4i slen, int check){
 }
 
 thread_beg_func(pgz);
+#ifdef LT_TIMER
 lt_timer_start(1);
+#endif
 PGZF *pz;
 u1v *dst, *src;
 u4i bufsize, hsize, rsize, dsz, ssz, next;
@@ -484,7 +486,9 @@ if(pgz->task == PGZF_TASK_DEFLATE){
 	}
 }
 thread_end_loop(pgz);
+#ifdef LT_TIMER
 lt_timer_stop(1);
+#endif
 thread_end_func(pgz);
 
 static inline PGZF* open_pgzf_writer(FILE *out, u4i buffer_size, int ncpu, int level){
