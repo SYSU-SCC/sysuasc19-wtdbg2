@@ -314,7 +314,7 @@ int pgzf_inflate_core(u1i *dst, u4i *dlen, u1i *src, u4i slen, int check){
 
 thread_beg_func(pgz);
 #ifdef LT_TIMER
-lt_timer_start(1);
+lt_timer_start(1, pgz->t_idx);
 #endif
 PGZF *pz;
 u1v *dst, *src;
@@ -487,7 +487,7 @@ if(pgz->task == PGZF_TASK_DEFLATE){
 }
 thread_end_loop(pgz);
 #ifdef LT_TIMER
-lt_timer_stop(1);
+lt_timer_stop(1, pgz->t_idx);
 #endif
 thread_end_func(pgz);
 

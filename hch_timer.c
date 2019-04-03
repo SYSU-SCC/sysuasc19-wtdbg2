@@ -217,22 +217,26 @@ static __inline__ HCH_CC_TYPE getusTime(void)
 //         hch_cc[*num] += (HCH_CC_TYPE)getmsTime() - hch_tmp_cc[*num];
 // }
 
+#define thread_num 36 
 
-HCH_CC_TYPE timer_cc[timer_num];
-HCH_CC_TYPE timer_temp_cc[timer_num];
+HCH_CC_TYPE timer_cc[thread_num][timer_num];
+HCH_CC_TYPE timer_temp_cc[thread_num][timer_num];
 
 
 void lt_timer_init(){
     int i=0;
-    for(i = 0; i < timer_num; i++)
-    {
-        timer_cc[i]=0;
-        timer_temp_cc[i]=0;
+    int j=0;
+    for(i = 0; i < thread_num; i++){
+        for(j = 0; j < timer_num; j++)
+        {
+            timer_cc[i][j]=0;
+            timer_temp_cc[i][j]=0;
+        }
     }
 }
 
-void lt_timer_start(int num){
-    timer_temp_cc[num]=GetCycleCount();
+void lt_timer_start(int num, int tid){
+    timer_temp_cc[tid][num]=GetCycleCount();
     // if(num != 8)
     //     timer_temp_cc[num]=getmsTime();
     // else{
@@ -242,8 +246,9 @@ void lt_timer_start(int num){
 
 }
 
-void lt_timer_stop(int num){
-    timer_cc[num] = GetCycleCount() - timer_temp_cc[num];
+int lt_timer_stop(int num,int tid){
+    timer_cc[tid][num] += GetCycleCount() - timer_temp_cc[tid][num];
+    printf("%p\n",timer_cc);
     // printf("%0.4f\n", GetCycleCount() - timer_temp_cc[num]);
     // if(num == 8){
     //     printf("%.4f\n", (GetCycleCount() - timer_temp_cc[num])*1000.0/CCPS);
@@ -251,21 +256,23 @@ void lt_timer_stop(int num){
 }
 
 void lt_timer_finalize(){
-    int j=0;
+    int i=0,j=0;
     printf("hch_timer_finalize_\n");
     FILE * fp;
     fp = fopen ("hch_timer_profile.csv", "w");
-    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func, psort, clear_kbmmapv, query_index_kbm, map_kbm, sort_array");
+    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func, writeAlign, changeRDFlag, chainning_hit, editGraph, result_time,");
     fprintf(fp, "\n");
     
     // printf("%d,", my_rank);
     // fprintf(fp, "%d,", 0);
-    for(j = 0; j < timer_num; j++)
-    {
-        // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
-        fprintf(fp, "%.4f,", timer_cc[j] * 1.0 / CCPS );
+    for(i = 0; i < thread_num; i++){
+        for(j = 0; j < timer_num; j++)
+        {
+            // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
+            fprintf(fp, "%.4f,", timer_cc[i][j] * 1.0 / CCPS );
+        }    
+        fprintf(fp, "\n");
     }
-
     fprintf(fp, "\n");
     // printf("\n");
 

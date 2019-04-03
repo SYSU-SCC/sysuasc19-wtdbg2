@@ -13,10 +13,14 @@ CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O0 -DDEBUG=1 -DTIMESTAMP="$(TI
 else
 CFLAGS=-g -w -Wno-unused-but-set-variable -O3 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2
 endif
-CFLAGS+= -DLT_TIMER -DLT_STLSORT -DLT_HIT
+CFLAGS+= -DLT_TIMER
+# -DLT_STLSORT
+# -DLT_HIT
 # -DLT_TASK_REVERSE
 
-GLIBS=-lm -lrt -lpthread -lz  -L./ -llt_sort
+GLIBS=-lm -lrt -lpthread -L./ -llt_sort -lz
+# -L../zlib/lib/
+#-lz
 GENERIC_SRC=mem_share.h chararray.h sort.h list.h pgzf.h  sort.h list.h dna.h thread.h filereader.h filewriter.h bitvec.h bit2vec.h bitsvec.h hashset.h
 
 PROGS=ltsort.a kbm2 wtdbg2 wtdbg-cns wtpoa-cns pgzf

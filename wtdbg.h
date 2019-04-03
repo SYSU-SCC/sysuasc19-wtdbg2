@@ -659,8 +659,7 @@ thread_end_def(mdbg);
 
 thread_beg_func(mdbg);
 #ifdef LT_TIMER
-if(mdbg->t_idx == 0)
-	lt_timer_start(2);
+lt_timer_start(2, mdbg->t_idx);
 #endif
 Graph *g;
 KBM *kbm;
@@ -712,8 +711,7 @@ free_u4v(maps[0]);
 free_u4v(maps[1]);
 free_u4v(maps[2]);
 #ifdef LT_TIMER
-if(mdbg->t_idx == 0)
-	lt_timer_stop(2);
+lt_timer_stop(2 , mdbg->t_idx);
 #endif
 thread_end_func(mdbg);
 
@@ -1433,13 +1431,14 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				pb = NULL;
 			}
 			// if(mdbg->t_idx == 0)
-				lt_timer_start(8);
+				lt_timer_start(8, 0);
 #ifndef LT_HIT
 			if(mdbg->reg.closed == 0){
 				KBMAux *aux = mdbg->aux;
 				if(g->corr_mode && mdbg->cc->cns->size){
 					g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 				}
+				lt_timer_start(4, 0);
 				if(alno){
 					beg_bufferedwriter(bw);
 					if(g->corr_mode && mdbg->cc->cns->size){
@@ -1452,6 +1451,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					}
 					end_bufferedwriter(bw);
 				}
+				lt_timer_stop(4, 0);
+				lt_timer_start(5, 0);
 				for(i=0;i<mdbg->aux->hits->size;i++){
 					hit = ref_kbmmapv(mdbg->aux->hits, i);
 					if(hit->mat == 0) continue;
@@ -1463,10 +1464,13 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						one_bitvec(rdflags, hit->tidx);
 					}
 				}
-				
+				lt_timer_stop(5, 0);
+				lt_timer_start(6, 0);
 				if(g->chainning_hits){
 					chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 				}
+				lt_timer_stop(6, 0);
+				lt_timer_start(7, 0);
 				for(i=0;i<aux->hits->size;i++){
 					hit = ref_kbmmapv(aux->hits, i);
 					if(hit->mat == 0) continue;
@@ -1484,6 +1488,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						map2rdhits_graph(g, hit);
 					}
 				}
+				lt_timer_stop(7, 0);
 				if(KBM_LOG){
 					fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
 					for(i=0;i<mdbg->aux->hits->size;i++){
@@ -1498,7 +1503,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			mdbg->lt_arg = &arg;
 #endif
 			// if(mdbg->t_idx == 0)
-				lt_timer_stop(8); 
+			lt_timer_stop(8, 0); 
 			if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
 				pb = ref_kbmreadv(g->kbm->reads, rid);
 				mdbg->reg = (reg_t){0, rid, 0, 0, pb->rdlen, 0, 0};
@@ -1535,9 +1540,9 @@ void lt_hitresult(lt_arg_struct * lt_arg){
 	u8i *nhit=lt_arg->nhit;
 	BufferedWriter* bw=lt_arg->bw;
 
-	printf("mdbg: %d\n", 18);
-	printf("bw: %p\n", bw);
-	printf("out: %p\n", bw->out);
+	// printf("mdbg: %d\n", 18);
+	// printf("bw: %p\n", bw);
+	// printf("out: %p\n", bw->out);
 	int i=0;
 	if(mdbg->reg.closed == 0){
 		KBMAux *aux = mdbg->aux;

@@ -648,7 +648,7 @@ thread_end_def(midx);
 
 thread_beg_func(midx);
 #ifdef LT_TIMER
-lt_timer_start(3);
+lt_timer_start(3, midx->t_idx);
 #endif
 KBM *kbm;
 kbm_bin_t *bin;
@@ -921,7 +921,7 @@ for(i=0;i<KBM_N_HASH;i++) free_kbmmidxv(kidxs[i]);
 free(kidxs);
 free_tmpbmerv(bms);
 #ifdef LT_TIMER
-lt_timer_stop(3);
+lt_timer_stop(3, midx->t_idx);
 #endif
 thread_end_func(midx);
 
