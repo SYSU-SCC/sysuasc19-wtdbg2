@@ -272,8 +272,8 @@ typedef struct {
 	u4i      bmlen, bmoff, bmcnt;
 	kbmdpev  *caches[2];
 	KBMDP    *dps[2];
-	kbmmapv  *hits;
-	BitsVec  *cigars;
+	kbmmapv  *hits; //need
+	BitsVec  *cigars; //need
 	BitVec   *solids;
 	String   *str;
 } KBMAux;

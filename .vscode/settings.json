@@ -11,6 +11,8 @@
         "list": "cpp",
         "vector": "cpp",
         "xhash": "cpp",
-        "iosfwd": "cpp"
+        "iosfwd": "cpp",
+        "unordered_map": "cpp",
+        "xmemory0": "cpp"
     }
 }
