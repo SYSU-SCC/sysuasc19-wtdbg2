@@ -1,7 +1,7 @@
 VERSION=2.3
 
 CC  := gcc
-CX := gcc
+CX := g++
 BIN := /usr/local/bin
 
 ifeq (0, ${MAKELEVEL})

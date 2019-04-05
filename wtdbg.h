@@ -26,7 +26,7 @@
 #include "pgzf.h"
 #include <getopt.h>
 #include <regex.h>
-#include "mpi.h"
+// #include "mpi.h"
 
 #define WT_MAX_RD			0x3FFFFFFF // 1 G
 #define WT_MAX_RDLEN		0x00FFFFFF // 16 Mb
@@ -714,14 +714,9 @@ lt_timer_start(13, mdbg->t_idx);
 lt_timer_stop(13, mdbg->t_idx); 
 	// if(mdbg->t_idx == 0)
 	// 	lt_timer_stop(8);  
-#ifdef LT_HIT
-	mdbg->lt_arg->mdbg = mdbg;
-	mdbg->lt_arg->g = g;
-	lt_hitresult(mdbg->lt_arg);
-#endif
-
 }
-lt_timer_stop(9, mdbg->t_idx); 
+lt_timer_stop(9, mdbg->t_idx);
+
 thread_end_loop(mdbg);
 free_u4v(maps[0]);
 free_u4v(maps[1]);
@@ -1310,6 +1305,21 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	u8i nbp, mbp, nhit;
 	u4i rid, i, ib, ie, qb, qe;
 	int reset_kbm, n_cpu;
+
+	int rank=0, nsize=1;
+
+	// int provided;
+	// MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
+	// if(provided != MPI_THREAD_MULTIPLE)
+	// {
+	// 	fprintf(stderr, "MPI do not Support Multiple thread\n");
+	// 	exit(0);
+	// }
+	// MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
+    // MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
+
+    // fprintf(stderr, "hello world! process %d of %d\n", rank, nsize);
+
 	thread_prepare(mdbg);
 	if(KBM_LOG) n_cpu = 1;
 	else n_cpu = ncpu;
@@ -1427,104 +1437,95 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 		mdbg->task = 1;
 		thread_end_iter(mdbg);
 
-#ifdef LT_TASK_REVERSE
-		int rrid = 0;
-		for(rrid = qb;rrid<=qe+ncpu;rrid++){
-			// index change 
-			if(rrid - qb > ncpu && rrid < qe){
-				rid = qe - rrid + qb + ncpu;
-			}else{
-				rid = rrid;
-			}
-#else
-		for(rid=qb;rid<=qe+ncpu;rid++){
-#endif
-			if(rid < qe){
-				if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
-				thread_wait_one(mdbg);
-			} else {
-				thread_wait_next(mdbg);
-				pb = NULL;
-			}
-			// if(mdbg->t_idx == 0)
-				lt_timer_start(8, 0);
-#ifndef LT_HIT
-			if(mdbg->reg.closed == 0){
-				KBMAux *aux = mdbg->aux;
-				if(g->corr_mode && mdbg->cc->cns->size){
-					g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
+		int rrid=qb;
+		// for(rid=qb;rid<=qe+ncpu;rid++){
+		for(rrid=qb;rrid<=qe;rrid+=ncpu*nsize){
+			int rstart=rrid + ncpu*rank;
+			int rend=rstart + ncpu;
+			rend = rend > qe?qe:rend;
+
+			// 唤起，看起来使用wake all会更好
+			thread_beg_iter(mdbg); // get_bitvec(rdflags, rid) == 0 这个应该做一下负载均衡，不过先跑起来
+				rid = rstart+ mdbg_i;
+				if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
+					pb = ref_kbmreadv(g->kbm->reads, rid);
+					mdbg->reg = (reg_t){0, rid, 0, 0, pb->rdlen, 0, 0};
+					mdbg->task = 1;
+				}else{
+					mdbg->task = 0;
 				}
-				lt_timer_start(4, 0);
-				if(alno){
-					beg_bufferedwriter(bw);
+			thread_end_iter(mdbg);
+			int lt666=0;
+			thread_apply_all(mdbg,lt666=1);// 带有 wait
+
+			// MPI_Barrier(MPI_COMM_WORLD);
+
+			//lt: handle result
+			lt_timer_start(8, 0);
+			// 整理结果
+
+			thread_beg_iter(mdbg);
+				if(mdbg->task == 1 && mdbg->reg.closed == 0){
+					KBMAux *aux = mdbg->aux;
 					if(g->corr_mode && mdbg->cc->cns->size){
-						fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-						println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+						g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 					}
+					lt_timer_start(4, 0);
+					if(alno){
+						beg_bufferedwriter(bw);
+						if(g->corr_mode && mdbg->cc->cns->size){
+							fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
+							println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+						}
+						for(i=0;i<mdbg->aux->hits->size;i++){
+							hit = ref_kbmmapv(mdbg->aux->hits, i);
+							fprint_hit_kbm(mdbg->aux, i, bw->out);
+						}
+						end_bufferedwriter(bw);
+					}
+					lt_timer_stop(4, 0);
+					lt_timer_start(5, 0);
 					for(i=0;i<mdbg->aux->hits->size;i++){
 						hit = ref_kbmmapv(mdbg->aux->hits, i);
-						fprint_hit_kbm(mdbg->aux, i, bw->out);
+						if(hit->mat == 0) continue;
+						if(rdflags
+							&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
+							&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
+							&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
+							){
+							one_bitvec(rdflags, hit->tidx);
+						}
 					}
-					end_bufferedwriter(bw);
-				}
-				lt_timer_stop(4, 0);
-				lt_timer_start(5, 0);
-				for(i=0;i<mdbg->aux->hits->size;i++){
-					hit = ref_kbmmapv(mdbg->aux->hits, i);
-					if(hit->mat == 0) continue;
-					if(rdflags
-						&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
-						&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
-						&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
-						){
-						one_bitvec(rdflags, hit->tidx);
+					lt_timer_stop(5, 0);
+					lt_timer_start(6, 0);
+					if(g->chainning_hits){
+						chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 					}
-				}
-				lt_timer_stop(5, 0);
-				lt_timer_start(6, 0);
-				if(g->chainning_hits){
-					chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
-				}
-				lt_timer_stop(6, 0);
-				for(i=0;i<aux->hits->size;i++){
-					hit = ref_kbmmapv(aux->hits, i);
-					if(hit->mat == 0) continue;
-					//hit->qb  /= KBM_BIN_SIZE;
-					//hit->qe  /= KBM_BIN_SIZE;
-					//hit->tb  /= KBM_BIN_SIZE;
-					//hit->te  /= KBM_BIN_SIZE;
-					//hit->aln /= KBM_BIN_SIZE;
-					nhit ++;
-					append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
-					hit->cgoff = g->cigars->size - hit->cglen;
-					if(raw){
-						hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
-					} else {
-						lt_timer_start(7, 0);
-						map2rdhits_graph(g, hit);
-						lt_timer_stop(7, 0);
+					lt_timer_stop(6, 0);
+					for(i=0;i<aux->hits->size;i++){
+						hit = ref_kbmmapv(aux->hits, i);
+						if(hit->mat == 0) continue;
+						nhit ++;
+						append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
+						hit->cgoff = g->cigars->size - hit->cglen;
+						if(raw){
+							hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
+						} else {
+							lt_timer_start(7, 0);
+							map2rdhits_graph(g, hit);
+							lt_timer_stop(7, 0);
+						}
 					}
-				}
-				if(KBM_LOG){
-					fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
-					for(i=0;i<mdbg->aux->hits->size;i++){
-						hit = ref_kbmmapv(mdbg->aux->hits, i);
-							fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
+					if(KBM_LOG){
+						fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
+						for(i=0;i<mdbg->aux->hits->size;i++){
+							hit = ref_kbmmapv(mdbg->aux->hits, i);
+								fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
+						}
 					}
+					mdbg->reg.closed = 1;
 				}
-				mdbg->reg.closed = 1;
-			}
-#else
-			lt_arg_struct arg = (lt_arg_struct){g, mdbg, rdflags, hit, alno, &nhit, bw};
-			mdbg->lt_arg = &arg;
-#endif
-			// if(mdbg->t_idx == 0)
-			lt_timer_stop(8, 0); 
-			if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
-				pb = ref_kbmreadv(g->kbm->reads, rid);
-				mdbg->reg = (reg_t){0, rid, 0, 0, pb->rdlen, 0, 0};
-				thread_wake(mdbg);
-			}
+			thread_end_iter(mdbg);
 		}
 	}
 	thread_beg_close(mdbg);
@@ -1542,6 +1543,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	if(reset_kbm){
 		reset_index_kbm(g->kbm);
 	}
+	// MPI_Finalize();
 	return nhit;
 }
 
