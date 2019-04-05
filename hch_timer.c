@@ -82,141 +82,6 @@ static __inline__ HCH_CC_TYPE getusTime(void)
     return time;
 }
 
-// HCH_CC_TYPE hch_cc[MAX_HCH_TIMER_LEN];
-// HCH_CC_TYPE hch_tmp_cc[MAX_HCH_TIMER_LEN];
-
-// void hch_timer_init_()
-// {
-//     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-//     MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
-
-//     int i;
-//     for(i = 0; i < MAX_HCH_TIMER_LEN; i++)
-//         hch_cc[i] = 0;
-// }
-
-// //hch intel timer
-
-// void hch_timer_manual(long* arr, int cnt, const char* fname, const char* header)
-// {
-//     if(my_rank == 0)
-//     {
-//         FILE * fp;
-//         fp = fopen (fname, "w");
-//         fprintf(fp, header);
-//         fprintf(fp, "\n");
-//         fflush(fp);
-//         fclose(fp);
-//     }
-//     MPI_Barrier(MPI_COMM_WORLD);
-//     int i, j, k;
-//     for(i = 0; i < comm_sz; i++)
-//     {
-//         if(my_rank == i)
-//         {
-//             FILE * fp;
-
-//             fp = fopen (fname, "a");
-
-//             fprintf(fp, "%d,", my_rank);
-
-//             for(j = 0; j < cnt; j++)
-//             {
-//                 fprintf(fp, "%.4f,", arr[j] * 1.0);
-//             }
-
-//             fprintf(fp, "\n");
-
-//             fflush(fp);
-//             fclose(fp);
-
-//             fflush(stdout);
-//         }
-//         MPI_Barrier(MPI_COMM_WORLD);
-//     }
-// }
-
-// void hch_timer_finalize_()
-// {
-//     if(my_rank == 0)
-//     {
-//         printf("hch_timer_finalize_\n");
-//         FILE * fp;
-//         fp = fopen ("hch_timer_profile.csv", "w");
-//         fprintf(fp, "my_rank, all, thread_pgz_func, merge_row_rdaln_pog, realign_msa_pog_core");
-//         fprintf(fp, "\n");
-//         fflush(fp);
-//         fclose(fp);
-//     }
-//     MPI_Barrier(MPI_COMM_WORLD);
-//     int i, j, k;
-//     for(i = 0; i < comm_sz; i++)
-//     {
-//         if(my_rank == i)
-//         {
-//             FILE * fp;
-
-//             fp = fopen ("hch_timer_profile.csv", "a");
-
-//             // printf("%d,", my_rank);
-//             fprintf(fp, "%d,", my_rank);
-
-//             #ifndef HCH_TIMER_CNT
-//             for(j = 0; j < MAX_HCH_TIMER_LEN; j++)
-//             {
-//                 if(hch_cc[j] == 0)
-//                     break;
-//                 // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
-//                 fprintf(fp, "%.4f,", hch_cc[j] * 1.0 );
-//             }
-//             #else
-//             for(j = 0; j < HCH_TIMER_CNT; j++)
-//             {
-//                 // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
-//                 fprintf(fp, "%.4f,", hch_cc[j] * 1.0 );
-//             }
-//             #endif
-
-//             fprintf(fp, "\n");
-//             // printf("\n");
-
-//             fflush(fp);
-//             fclose(fp);
-
-//             fflush(stdout);
-//         }
-//         MPI_Barrier(MPI_COMM_WORLD);
-//     }
-// }
-
-// void hch_timer_start(int num)
-// {
-//     // if(omp_get_thread_num()==0)
-//     //printf("my_rank = %d, num = %d\n", my_rank, *num);
-//         hch_tmp_cc[num] = (HCH_CC_TYPE)getmsTime();
-// }
-
-// void hch_timer_stop(int num)
-// {
-//     //printf("my_rank = %d, num = %d\n", my_rank, *num);
-//     // if(omp_get_thread_num()==0)
-//         hch_cc[num] += (HCH_CC_TYPE)getmsTime() - hch_tmp_cc[num];
-// }
-
-// void hch_timer_start_(int* num)
-// {
-//     //printf("my_rank = %d, num = %d\n", my_rank, *num);
-//     // if(omp_get_thread_num()==0)
-//         hch_tmp_cc[*num] = (HCH_CC_TYPE)getmsTime();
-// }
-
-// void hch_timer_stop_(int* num)
-// {
-//     //printf("my_rank = %d, num = %d\n", my_rank, *num);
-//     // if(omp_get_thread_num()==0)
-//         hch_cc[*num] += (HCH_CC_TYPE)getmsTime() - hch_tmp_cc[*num];
-// }
-
 #define thread_num 36 
 
 HCH_CC_TYPE timer_cc[thread_num][timer_num];
@@ -237,30 +102,20 @@ void lt_timer_init(){
 
 void lt_timer_start(int num, int tid){
     timer_temp_cc[tid][num]=GetCycleCount();
-    // if(num != 8)
-    //     timer_temp_cc[num]=getmsTime();
-    // else{
-    //     timer_temp_cc[num]=getusTime();
-            
-    // }
-
 }
 
 int lt_timer_stop(int num,int tid){
     timer_cc[tid][num] += GetCycleCount() - timer_temp_cc[tid][num];
-    printf("%p\n",timer_cc);
-    // printf("%0.4f\n", GetCycleCount() - timer_temp_cc[num]);
-    // if(num == 8){
-    //     printf("%.4f\n", (GetCycleCount() - timer_temp_cc[num])*1000.0/CCPS);
+    // if(num == 14 && tid ==0){
+    //     printf("%f\n", (GetCycleCount() - timer_temp_cc[tid][num]) * 1000.0/CCPS);
     // }
 }
 
 void lt_timer_finalize(){
     int i=0,j=0;
-    printf("hch_timer_finalize_\n");
     FILE * fp;
     fp = fopen ("hch_timer_profile.csv", "w");
-    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func, writeAlign, changeRDFlag, chainning_hit, editGraph, result_time,");
+    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func, writeAlign, changeRDFlag, chainning_hit, editGraph, result_time, loop_mdbg, clearkbm, query_index_kbm, map_kbm, sorthit_mat, push_kmer_match_kbm, map_kbm_pre,map_index_sort");
     fprintf(fp, "\n");
     
     // printf("%d,", my_rank);

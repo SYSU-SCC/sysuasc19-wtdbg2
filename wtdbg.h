@@ -26,6 +26,7 @@
 #include "pgzf.h"
 #include <getopt.h>
 #include <regex.h>
+#include "mpi.h"
 
 #define WT_MAX_RD			0x3FFFFFFF // 1 G
 #define WT_MAX_RDLEN		0x00FFFFFF // 16 Mb
@@ -351,6 +352,7 @@ static inline int map2rdhits_graph(Graph *g, kbm_map_t *hit){
 	rh->lnks[0].cnt = hit->mat;
 	rh->lnks[1].cnt = hit->cglen;
 	add = 0;
+	// #pragma omp parallel for default(shared) private(k, rd,hn,f,hp,p,n)
 	for(k=0;k<2;k++){
 		rd = ref_readv(g->reads, rh->frgs[k].rid);
 		hn = ref_rdhitv(g->rdhits, rd->hits.idx);
@@ -678,25 +680,38 @@ maps[0] = init_u4v(32);
 maps[1] = init_u4v(32);
 maps[2] = init_u4v(32);
 thread_beg_loop(mdbg);
+lt_timer_start(9, mdbg->t_idx); 
 if(mdbg->task == 1){
-	// if(mdbg->t_idx == 0)
-	// 	lt_timer_start(8); 
 	// printf("tidx:%d\n", mdbg->t_idx);
 	// printf("rid:%d\n", reg->rid);
 	if(reg->closed) continue;
 	if(g->corr_mode){
+		
+		lt_timer_start(10, mdbg->t_idx); 
 		if(map_kbmpoa(mdbg->cc, aux, kbm->reads->buffer[reg->rid].tag, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg, g->corr_min, g->corr_max, g->corr_cov, NULL) == 0){
 			clear_kbmmapv(aux->hits);
 		}
+		lt_timer_stop(10, mdbg->t_idx);
 	} else {
+		
+		lt_timer_start(11, mdbg->t_idx); 
 		query_index_kbm(aux, NULL, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg);
+		lt_timer_stop(11, mdbg->t_idx);
+		lt_timer_start(12, mdbg->t_idx); 
+#ifdef LT_TIMER
+		map_kbm_timer(aux, mdbg->t_idx);
+#else
 		map_kbm(aux);
+#endif
+		lt_timer_stop(12, mdbg->t_idx);
 	}
+lt_timer_start(13, mdbg->t_idx); 
 #ifndef LT_STLSORT
 	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(b.mat, a.mat));
 #else
 	lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size,0);
 #endif
+lt_timer_stop(13, mdbg->t_idx); 
 	// if(mdbg->t_idx == 0)
 	// 	lt_timer_stop(8);  
 #ifdef LT_HIT
@@ -706,6 +721,7 @@ if(mdbg->task == 1){
 #endif
 
 }
+lt_timer_stop(9, mdbg->t_idx); 
 thread_end_loop(mdbg);
 free_u4v(maps[0]);
 free_u4v(maps[1]);
@@ -1470,7 +1486,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 				}
 				lt_timer_stop(6, 0);
-				lt_timer_start(7, 0);
 				for(i=0;i<aux->hits->size;i++){
 					hit = ref_kbmmapv(aux->hits, i);
 					if(hit->mat == 0) continue;
@@ -1485,10 +1500,11 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					if(raw){
 						hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
 					} else {
+						lt_timer_start(7, 0);
 						map2rdhits_graph(g, hit);
+						lt_timer_stop(7, 0);
 					}
 				}
-				lt_timer_stop(7, 0);
 				if(KBM_LOG){
 					fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
 					for(i=0;i<mdbg->aux->hits->size;i++){

@@ -1,4 +1,4 @@
-#define timer_num 9
+#define timer_num 18
 
 // #define lt_timer_start(num) lt_timer_start(num, 0)
 // #define lt_timer_stop(num) lt_timer_stop(num, 0)
