@@ -276,7 +276,28 @@ typedef struct {
 	BitsVec  *cigars; //need
 	BitVec   *solids;
 	String   *str;
+	reg_t    lt_reg;
 } KBMAux;
+
+static inline uint64_t getSize_aux(KBMAux* src){
+	return getSize_kbmmapv(src->hits) + getSize_bitsvec(src);
+}
+
+static inline uint64_t encode_aux(KBMAux* src, char* dest){
+	uint64_t offset=0;
+	offset += encode_kbmmapv(src->hits, dest+offset);
+	offset += encode_bitsvec(src->cigars, dest+offset);
+	return offset;
+}
+
+static inline uint64_t decode_aux(char* src, KBMAux* dest){
+	uint64_t offset=0;
+	dest->hits = (kbmmapv*)malloc(sizeof(kbmmapv));
+	offset += decode_kbmmapv(src+offset, dest->hits);
+	dest->cigars = calloc(1, sizeof(BitsVec));;
+	offset += decode_bitsvec(src+offset, dest->cigars);
+	return offset;
+}
 
 static inline KBMPar* init_kbmpar(){
 	KBMPar *par;
