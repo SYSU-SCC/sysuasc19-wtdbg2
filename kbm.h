@@ -276,10 +276,10 @@ typedef struct {
 	BitsVec  *cigars; //need
 	BitVec   *solids;
 	String   *str;
-	reg_t    lt_reg;
 } KBMAux;
 
 static inline uint64_t getSize_aux(KBMAux* src){
+	printf("aux: %lld, %lld\n",getSize_kbmmapv(src->hits), getSize_bitsvec(src));
 	return getSize_kbmmapv(src->hits) + getSize_bitsvec(src);
 }
 

@@ -718,7 +718,6 @@ lt_timer_start(13, mdbg->t_idx);
 lt_timer_stop(13, mdbg->t_idx); 
 }
 lt_timer_stop(9, mdbg->t_idx);
-aux->lt_reg = mdbg->reg;
 if(mdbg->lt_buffer!=NULL) free(mdbg->lt_buffer);
 mdbg->lt_buffer=(char*)malloc(getSize_aux(aux));
 mdbg->lt_size = encode_aux(aux,mdbg->lt_buffer);
@@ -1311,22 +1310,22 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	u4i rid, i, ib, ie, qb, qe;
 	int reset_kbm, n_cpu;
 
-	int j;
-	int *sv = (int*)malloc(nsize*sizeof(int));
-	int *displs = (int*)malloc(nsize*sizeof(int));
+	// int j;
+	// int *sv = (int*)malloc(nsize*sizeof(int));
+	// int *displs = (int*)malloc(nsize*sizeof(int));
 
 	int rank=0, nsize=1;
-	char* LT_MPI_send_buffer=NULL;
-	char* LT_MPI_recv_buffer=NULL;
-	int provided;
-	MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
-	if(provided != MPI_THREAD_MULTIPLE)
-	{
-		fprintf(stderr, "MPI do not Support Multiple thread\n");
-		exit(0);
-	}
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
-    MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
+	// char* LT_MPI_send_buffer=NULL;
+	// char* LT_MPI_recv_buffer=NULL;
+	// int provided;
+	// MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
+	// if(provided != MPI_THREAD_MULTIPLE)
+	// {
+	// 	fprintf(stderr, "MPI do not Support Multiple thread\n");
+	// 	exit(0);
+	// }
+	// MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
+    // MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
 
     // fprintf(stderr, "hello world! process %d of %d\n", rank, nsize);
 
@@ -1469,114 +1468,114 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			int lt666=0;
 			thread_apply_all(mdbg,lt666=1);// 带有 wait
 
-			// 统合结果
-			int totalsize_send = 0;
-			thread_beg_iter(mdbg);
-				mdbg->displ = totalsize_send;
-				totalsize_send+=mdbg->lt_size;
-			thread_end_iter(mdbg);
-			LT_MPI_send_buffer = (char*)malloc(totalsize_send);
-			// thread_apply_all(mdbg,task=2) // 稍微改动代码，TODO：：规约数据到这个buffer里面 
-			// 获得每个进程buffer的大小
+			// // 统合结果
+			// int totalsize_send = 0;
+			// thread_beg_iter(mdbg);
+			// 	mdbg->displ = totalsize_send;
+			// 	totalsize_send+=mdbg->lt_size;
+			// thread_end_iter(mdbg);
+			// LT_MPI_send_buffer = (char*)malloc(totalsize_send);
+			// // thread_apply_all(mdbg,task=2) // 稍微改动代码，TODO：：规约数据到这个buffer里面 
+			// // 获得每个进程buffer的大小
 
-			MPI_Allgather(&totalsize_send, 1, MPI_INT, 
-					sv, 1, MPI_INT, MPI_COMM_WORLD);
-			int totalsize_recv=0;
-			for(int c1=0;c1<nsize;c1++){
-				displs[c1] = totalsize_recv;
-				totalsize_recv+=sv[c1];
-			}
-			LT_MPI_recv_buffer = (char*)malloc(totalsize_recv);
+			// MPI_Allgather(&totalsize_send, 1, MPI_INT, 
+			// 		sv, 1, MPI_INT, MPI_COMM_WORLD);
+			// int totalsize_recv=0;
+			// for(int c1=0;c1<nsize;c1++){
+			// 	displs[c1] = totalsize_recv;
+			// 	totalsize_recv+=sv[c1];
+			// }
+			// LT_MPI_recv_buffer = (char*)malloc(totalsize_recv);
 			
-			MPI_Allgatherv(LT_MPI_send_buffer, totalSize, MPI_CHAR,
-					LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
-			free(LT_MPI_send_buffer);
-			MPI_Barrier(MPI_COMM_WORLD); // 好像没用，
+			// MPI_Allgatherv(LT_MPI_send_buffer, totalSize, MPI_CHAR,
+			// 		LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
+			// free(LT_MPI_send_buffer);
+			// MPI_Barrier(MPI_COMM_WORLD); // 好像没用，
 
 
 			lt_timer_start(8, 0);
 			// 整理结果
-			// thread_beg_iter(mdbg);
-			for(j=0;j<nsize;j++){
+			thread_beg_iter(mdbg);
 				// 通过displs获得当前进程的结果
-				char* cur_buffer=LT_MPI_recv_buffer + displs;
+				// char* cur_buffer=LT_MPI_recv_buffer + displs;
 				// TODO：从buffer中解析到KBM数组之中,并得到个数
-				KBMAux* aux_array;
-				// no impletement
-				int aux_size=0; 
-				int aux_itr=0;
-				for(aux_itr=0;aux_itr<aux_size;aux_itr++){
-					KBMAux *aux = aux_array[aux_itr];
-					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略
-					if((rdflags == NULL || get_bitvec(rdflags, aux->lt_reg.rid) == 0) && aux->lt_reg.closed == 0){
-						// KBMAux *aux = malloc(sizeof(KBMAux));
-						// decode_aux(mdbg->lt_buffer,aux);
-						// if(g->corr_mode && mdbg->cc->cns->size){
-						// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
-						// }
-						lt_timer_start(4, 0);
-						if(alno && rank == 0){ // 只要第一个进程写就好
-							beg_bufferedwriter(bw);
-							// if(g->corr_mode && mdbg->cc->cns->size){
-							// 	fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-							// 	println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
-							// }
-							for(i=0;i<aux->hits->size;i++){
-								hit = ref_kbmmapv(aux->hits, i);
-								fprint_hit_kbm(aux, i, bw->out);
-							}
-							end_bufferedwriter(bw);
-						}
-						lt_timer_stop(4, 0);
+				KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
+				decode_aux(mdbg->lt_buffer,aux);
+				aux->kbm = g->kbm;
 
-						lt_timer_start(5, 0);
-						for(i=0;i<aux->hits->size;i++){
-							hit = ref_kbmmapv(aux->hits, i);
-							if(hit->mat == 0) continue;
-							if(rdflags
-								&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
-								&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
-								&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
-								){
-								one_bitvec(rdflags, hit->tidx);
-							}
-						}
-						lt_timer_stop(5, 0);
+				// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略
+				if(mdbg->task == 1 && (rdflags == NULL || get_bitvec(rdflags, mdbg->reg.rid) == 0) && mdbg->reg.closed == 0){
+					// KBMAux *aux = malloc(sizeof(KBMAux));
+					// decode_aux(mdbg->lt_buffer,aux);
+					// if(g->corr_mode && mdbg->cc->cns->size){
+					// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
+					// }
 
-						lt_timer_start(6, 0);
-						if(g->chainning_hits){
-							chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
-						}
-						lt_timer_stop(6, 0);
-						
-						for(i=0;i<aux->hits->size;i++){
-							hit = ref_kbmmapv(aux->hits, i);
-							if(hit->mat == 0) continue;
-							nhit ++;
-							append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
-							hit->cgoff = g->cigars->size - hit->cglen;
-							if(raw){
-								// hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
-							} else {
-								lt_timer_start(7, 0);
-								map2rdhits_graph(g, hit);
-								lt_timer_stop(7, 0);
-							}
-						}
-						// if(KBM_LOG){
-						// 	fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
-						// 	for(i=0;i<mdbg->aux->hits->size;i++){
-						// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
-						// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
-						// 	}
-						// }
-						aux->lt_reg.closed = 1;
-					}//end a thread's result
-				} // end process a processer's work
-			}
-			// thread_end_iter(mdbg);
+					// 缺了个字符串的，先不管它
+					// lt_timer_start(4, 0);  
+					// if(alno && rank == 0){ // 只要第一个进程写就好
+					// 	beg_bufferedwriter(bw);
+					// 	// if(g->corr_mode && mdbg->cc->cns->size){
+					// 	// 	fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
+					// 	// 	println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+					// 	// }
+					// 	for(i=0;i<aux->hits->size;i++){
+					// 		hit = ref_kbmmapv(aux->hits, i);
+					// 		fprint_hit_kbm(aux, i, bw->out);
+					// 	}
+					// 	end_bufferedwriter(bw);
+					// }
+					// lt_timer_stop(4, 0);
 
-			free(LT_MPI_recv_buffer);
+					lt_timer_start(5, 0);
+					for(i=0;i<aux->hits->size;i++){
+						hit = ref_kbmmapv(aux->hits, i);
+						if(hit->mat == 0) continue;
+						if(rdflags
+							&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
+							&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
+							&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
+							){
+							one_bitvec(rdflags, hit->tidx);
+						}
+					}
+					lt_timer_stop(5, 0);
+
+					lt_timer_start(6, 0);
+					if(g->chainning_hits){
+						chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
+					}
+					lt_timer_stop(6, 0);
+					
+					for(i=0;i<aux->hits->size;i++){
+						hit = ref_kbmmapv(aux->hits, i);
+						if(hit->mat == 0) continue;
+						nhit ++;
+						append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
+						hit->cgoff = g->cigars->size - hit->cglen;
+						if(raw){
+							// hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
+						} else {
+							lt_timer_start(7, 0);
+							map2rdhits_graph(g, hit);
+							lt_timer_stop(7, 0);
+						}
+					}
+					// if(KBM_LOG){
+					// 	fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
+					// 	for(i=0;i<mdbg->aux->hits->size;i++){
+					// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
+					// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
+					// 	}
+					// }
+					mdbg->reg.closed = 1;
+				}//end a thread's result
+				free(aux->hits);
+				free(aux->cigars);
+				free(aux);
+			thread_end_iter(mdbg);
+
+			// free(LT_MPI_recv_buffer);
 		}
 	}
 	thread_beg_close(mdbg);
@@ -1596,86 +1595,10 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	if(reset_kbm){
 		reset_index_kbm(g->kbm);
 	}			
-	free(sv)
-	free(displs);
-	MPI_Finalize();
+	// free(sv)
+	// free(displs);
+	// MPI_Finalize();
 	return nhit;
-}
-
-// static inline 
-void lt_hitresult(lt_arg_struct * lt_arg){
-	// lt_arg_struct* lt_arg = (lt_arg_struct*) arg; 
-	Graph *g =lt_arg->g;
-	struct mdbg_struct * mdbg=lt_arg->mdbg;
-	BitsVec* rdflags=lt_arg->rdflags;
-	kbm_map_t* hit=lt_arg->hit;
-	FILE* alno=lt_arg->alno;
-	u8i *nhit=lt_arg->nhit;
-	BufferedWriter* bw=lt_arg->bw;
-
-	// printf("mdbg: %d\n", 18);
-	// printf("bw: %p\n", bw);
-	// printf("out: %p\n", bw->out);
-	int i=0;
-	if(mdbg->reg.closed == 0){
-		KBMAux *aux = mdbg->aux;
-		if(g->corr_mode && mdbg->cc->cns->size){
-			g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
-		}
-		if(alno){
-			beg_bufferedwriter(bw);
-			if(g->corr_mode && mdbg->cc->cns->size){
-				fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-				println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
-			}
-			for(i=0;i<mdbg->aux->hits->size;i++){
-				hit = ref_kbmmapv(mdbg->aux->hits, i);
-				fprint_hit_kbm(mdbg->aux, i, bw->out);
-			}
-			
-			end_bufferedwriter(bw);
-		}
-		for(i=0;i<mdbg->aux->hits->size;i++){
-			hit = ref_kbmmapv(mdbg->aux->hits, i);
-			if(hit->mat == 0) continue;
-			if(rdflags
-				&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
-				&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
-				&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
-				){
-				one_bitvec(rdflags, hit->tidx);
-			}
-		}
-		
-		if(g->chainning_hits){
-			chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
-		}
-		for(i=0;i<aux->hits->size;i++){
-			hit = ref_kbmmapv(aux->hits, i);
-			if(hit->mat == 0) continue;
-			//hit->qb  /= KBM_BIN_SIZE;
-			//hit->qe  /= KBM_BIN_SIZE;
-			//hit->tb  /= KBM_BIN_SIZE;
-			//hit->te  /= KBM_BIN_SIZE;
-			//hit->aln /= KBM_BIN_SIZE;
-			(*nhit) ++;
-			append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
-			hit->cgoff = g->cigars->size - hit->cglen;
-			// if(raw){
-			// 	hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
-			// } else {
-				map2rdhits_graph(g, hit);
-			// }
-		}
-		// if(KBM_LOG){
-		// 	fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
-		// 	for(i=0;i<mdbg->aux->hits->size;i++){
-		// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
-		// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
-		// 	}
-		// }
-		mdbg->reg.closed = 1;
-	}
 }
 
 static inline void build_nodes_graph(Graph *g, u8i maxbp, int ncpu, FileReader *pws, int rdclip, char *prefix, char *dump_kbm){
