@@ -708,6 +708,8 @@ if(mdbg->task == 1){
 		map_kbm(aux);
 #endif
 		lt_timer_stop(12, mdbg->t_idx);
+		
+		printf("thread size: %llu, %llu\n",aux->cigars->size,aux->cigars->cap);
 	}
 lt_timer_start(13, mdbg->t_idx); 
 #ifndef LT_STLSORT

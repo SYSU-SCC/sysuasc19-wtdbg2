@@ -99,7 +99,7 @@ static inline uint64_t encode_bitsvec(BitsVec* src, char* dest){
 	uint64_t offset=0;
 	memcpy(dest+offset,src, sizeof(BitsVec));
 	offset+=sizeof(BitsVec);
-	memcpy(dest+offset,src->bits, (src->size * src->n_bit + 15) / 8*sizeof(uint8_t));
+	memcpy(dest+offset,src->bits, (src->size * src->n_bit + 15) / 8);
 	offset+=(src->size * src->n_bit + 15) / 8;
 	return offset;
 }
@@ -110,7 +110,7 @@ static inline uint64_t decode_bitsvec(char* src, BitsVec* dest){
 	offset+=sizeof(BitsVec);
 	dest->bits  = calloc((dest->cap * dest->n_bit + 15) / 8, 1);
 	// printf("size: %lld\n",(dest->size * dest->n_bit + 15) / 8*sizeof(uint8_t));
-	memcpy(dest->bits, src+offset, (dest->size * dest->n_bit + 15) / 8*sizeof(uint8_t));
+	memcpy(dest->bits, src+offset, (dest->size * dest->n_bit + 15) / 8);
 	offset+=(dest->cap * dest->n_bit + 15) / 8;
 	return offset;
 }
@@ -139,6 +139,7 @@ static inline int encap_bitsvec(BitsVec *vec, u8i n){
 	} else {
 		vec->cap = (vec->size + n + 0x3FFFFFFFLLU) & (MAX_U8 << 30);
 	}
+	printf("encap size: %llu, cap:%llu, n_bit: %llu\n",vec->size , vec->cap , vec->n_bit);
 	vec->bits = realloc(vec->bits, (vec->cap * vec->n_bit + 15) / 8);
 	return 1;
 }

@@ -279,8 +279,8 @@ typedef struct {
 } KBMAux;
 
 static inline uint64_t getSize_aux(KBMAux* src){
-	printf("aux: %lld, %lld\n",getSize_kbmmapv(src->hits), getSize_bitsvec(src));
-	return getSize_kbmmapv(src->hits) + getSize_bitsvec(src);
+	printf("aux: %llu, %llu\n",getSize_kbmmapv(src->hits), getSize_bitsvec(src->cigars));
+	return getSize_kbmmapv(src->hits) + getSize_bitsvec(src->cigars);
 }
 
 static inline uint64_t encode_aux(KBMAux* src, char* dest){
