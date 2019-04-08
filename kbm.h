@@ -255,12 +255,6 @@ typedef struct {
 define_list(kmeroffv, kmer_off_t);
 
 typedef struct {
-	u8i node;
-	u8i rid:30, dir:1, beg:16, end:16, closed:1;
-	u8i read_link;
-} lt_reg_t;
-
-typedef struct {
 	KBM    *kbm;
 	KBMPar *par; // can diff from kbm->par
 	char     *qtag;
@@ -282,11 +276,10 @@ typedef struct {
 	BitsVec  *cigars; //need
 	BitVec   *solids;
 	String   *str;
-	lt_reg_t    lt_reg;
+	reg_t    lt_reg;
 } KBMAux;
 
 static inline uint64_t getSize_aux(KBMAux* src){
-	printf("aux: %lld, %lld\n",getSize_kbmmapv(src->hits), getSize_bitsvec(src));
 	return getSize_kbmmapv(src->hits) + getSize_bitsvec(src);
 }
 
