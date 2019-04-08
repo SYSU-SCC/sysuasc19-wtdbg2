@@ -715,13 +715,13 @@ lt_timer_start(13, mdbg->t_idx);
 #else
 	lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size,0);
 #endif
-mdbg->lt_size = getSize_aux(aux);
 lt_timer_stop(13, mdbg->t_idx); 
-}else if(task == 2){ // 序列化
-	aux->lt_reg = mdbg->reg;
-	encode_aux(aux,mdbg->lt_buffer);
 }
 lt_timer_stop(9, mdbg->t_idx);
+aux->lt_reg = mdbg->reg;
+if(mdbg->lt_buffer!=NULL) free(mdbg->lt_buffer);
+mdbg->lt_buffer=(char*)malloc(getSize_aux(aux));
+mdbg->lt_size = encode_aux(aux,mdbg->lt_buffer);
 thread_end_loop(mdbg);
 free_u4v(maps[0]);
 free_u4v(maps[1]);
@@ -1314,7 +1314,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	int j;
 	int *sv = (int*)malloc(nsize*sizeof(int));
 	int *displs = (int*)malloc(nsize*sizeof(int));
-	int *displs_thread = (int*)malloc(ncpu*sizeof(int));
+
 	int rank=0, nsize=1;
 	char* LT_MPI_send_buffer=NULL;
 	char* LT_MPI_recv_buffer=NULL;
@@ -1463,27 +1463,20 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					mdbg->reg = (reg_t){0, rid, 0, 0, pb->rdlen, 0, 0};
 					mdbg->task = 1;
 				}else{
-					mdbg->task = 0; // TODO:: 把没有任务的顺延，不要空载
+					mdbg->task = 0;
 				}
 			thread_end_iter(mdbg);
 			int lt666=0;
 			thread_apply_all(mdbg,lt666=1);// 带有 wait
 
 			// 统合结果
-			int totalsize_send = ncpu*sizeof(int); // 偏置数组
+			int totalsize_send = 0;
 			thread_beg_iter(mdbg);
 				mdbg->displ = totalsize_send;
-				displs_thread[mdbg_i] = totalsize_send;
 				totalsize_send+=mdbg->lt_size;
 			thread_end_iter(mdbg);
 			LT_MPI_send_buffer = (char*)malloc(totalsize_send);
-			//设定偏移
-			// 偏置分割：
-			memcpy(LT_MPI_send_buffer,displs_thread,ncpu*sizeof(int))
-			thread_beg_iter(mdbg);
-				mdbg->lt_buffer = LT_MPI_send_buffer + mdbg->displ;
-			thread_end_iter(mdbg);
-			thread_apply_all(mdbg,task=2) // 规约数据到这个buffer里面 
+			// thread_apply_all(mdbg,task=2) // 稍微改动代码，TODO：：规约数据到这个buffer里面 
 			// 获得每个进程buffer的大小
 
 			MPI_Allgather(&totalsize_send, 1, MPI_INT, 
@@ -1498,7 +1491,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			MPI_Allgatherv(LT_MPI_send_buffer, totalSize, MPI_CHAR,
 					LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
 			free(LT_MPI_send_buffer);
-			MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
+			MPI_Barrier(MPI_COMM_WORLD); // 好像没用，
 
 
 			lt_timer_start(8, 0);
@@ -1506,16 +1499,14 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			// thread_beg_iter(mdbg);
 			for(j=0;j<nsize;j++){
 				// 通过displs获得当前进程的结果
-				char* cur_buffer=LT_MPI_recv_buffer + displs[j];
+				char* cur_buffer=LT_MPI_recv_buffer + displs;
 				// TODO：从buffer中解析到KBM数组之中,并得到个数
-				int aux_size=ncpu; 
-				//假定现在的就是每个进程都开相同数目的线程,会有一些没用的字段，但是不多，暂时不管
-				//解析偏置
-				memcpy(displs_thread,cur_buffer,ncpu*sizeof(int));
+				KBMAux* aux_array;
+				// no impletement
+				int aux_size=0; 
 				int aux_itr=0;
 				for(aux_itr=0;aux_itr<aux_size;aux_itr++){
-					KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
-					decode_aux(cur_buffer+displs_thread[aux_itr]);
+					KBMAux *aux = aux_array[aux_itr];
 					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略
 					if((rdflags == NULL || get_bitvec(rdflags, aux->lt_reg.rid) == 0) && aux->lt_reg.closed == 0){
 						// KBMAux *aux = malloc(sizeof(KBMAux));
@@ -1580,9 +1571,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						// 	}
 						// }
 						aux->lt_reg.closed = 1;
-						free(aux->cigars);
-						free(aux->hits);
-						free(aux);
 					}//end a thread's result
 				} // end process a processer's work
 			}
@@ -1610,7 +1598,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	}			
 	free(sv)
 	free(displs);
-	free(displs_thread);
 	MPI_Finalize();
 	return nhit;
 }
