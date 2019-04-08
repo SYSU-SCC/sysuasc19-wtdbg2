@@ -325,6 +325,8 @@ static inline int64_t mm_parse_num(const char *str)
 }
 
 int main(int argc, char **argv){
+	printf("init MPI: \n");
+	MPI_Init( &argc, &argv );
 #ifdef LT_TIMER
 	lt_timer_init();
 	lt_timer_start(0, 0);
@@ -1064,6 +1066,7 @@ int main(int argc, char **argv){
 	free_graph(g);
 	fprintf(KBM_LOGF, "[%s] Program Done\n", date());
 	END_STAT_PROC_INFO(stderr);
+	MPI_Finalize();
 #ifdef LT_TIMER
 	lt_timer_stop(0, 0);
 	lt_timer_finalize();

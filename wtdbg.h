@@ -1317,12 +1317,12 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	char* LT_MPI_send_buffer=NULL;
 	char* LT_MPI_recv_buffer=NULL;
 	int provided;
-	MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
-	if(provided != MPI_THREAD_MULTIPLE)
-	{
-		fprintf(stderr, "MPI do not Support Multiple thread\n");
-		exit(0);
-	}
+	// MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
+	// if(provided != MPI_THREAD_MULTIPLE)
+	// {
+	// 	fprintf(stderr, "MPI do not Support Multiple thread\n");
+	// 	exit(0);
+	// }
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
     MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
 
@@ -1477,9 +1477,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				mdbg->displ = totalsize_send;
 				displs_thread[mdbg_i] = totalsize_send;
 				totalsize_send+=mdbg->lt_size;
-				printf("%d,%lld\n", rank, mdbg->lt_size);
 			thread_end_iter(mdbg);
-			printf("total size to send: %d\n",totalsize_send);
+			// printf("total size to send: %d\n",totalsize_send);
 			LT_MPI_send_buffer = (char*)malloc(totalsize_send);
 			//设定偏移
 			// 偏置分割：
@@ -1498,7 +1497,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				displs[c1] = totalsize_recv;
 				totalsize_recv+=sv[c1];
 			}
-			printf("total size to rcv: %d\n",totalsize_recv);
+			// printf("total size to rcv: %d\n",totalsize_recv);
 			LT_MPI_recv_buffer = (char*)malloc(totalsize_recv);
 			
 			MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
@@ -1529,20 +1528,22 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						// if(g->corr_mode && mdbg->cc->cns->size){
 						// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 						// }
-						lt_timer_start(4, 0);
-						if(alno && rank == 0){ // 只要第一个进程写就好
-							beg_bufferedwriter(bw);
-							// if(g->corr_mode && mdbg->cc->cns->size){
-							// 	fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-							// 	println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
-							// }
-							for(i=0;i<aux->hits->size;i++){
-								hit = ref_kbmmapv(aux->hits, i);
-								fprint_hit_kbm(aux, i, bw->out);
-							}
-							end_bufferedwriter(bw);
-						}
-						lt_timer_stop(4, 0);
+
+						// TODO::缺了一点东西，要把kbm指针指回g的就行了，还有个string，忘了，不过不影响结果，先省略
+						// lt_timer_start(4, 0);
+						// if(alno && rank == 0){ // 只要第一个进程写就好
+						// 	beg_bufferedwriter(bw);
+						// 	// if(g->corr_mode && mdbg->cc->cns->size){
+						// 	// 	fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
+						// 	// 	println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+						// 	// }
+						// 	for(i=0;i<aux->hits->size;i++){
+						// 		hit = ref_kbmmapv(aux->hits, i);
+						// 		fprint_hit_kbm(aux, i, bw->out);
+						// 	}
+						// 	end_bufferedwriter(bw);
+						// }
+						// lt_timer_stop(4, 0);
 
 						lt_timer_start(5, 0);
 						for(i=0;i<aux->hits->size;i++){
@@ -1593,15 +1594,12 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				} // end process a processer's work
 			}
 			// thread_end_iter(mdbg);
-
 			free(LT_MPI_recv_buffer);
 		}
 	}
 	thread_beg_close(mdbg);
 	free(mdbg->aux->par);
 	free_kbmaux(mdbg->aux);
-	if(mdbg->lt_buffer!=NULL)
-		free(mdbg->lt_buffer);
 	if(g->corr_mode){
 		free_kbmblock((KBMBlock*)mdbg->cc->obj);
 		free_ctgcns(mdbg->cc);
@@ -1617,7 +1615,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	free(sv);
 	free(displs);
 	free(displs_thread);
-	MPI_Finalize();
 	return nhit;
 }
 

@@ -91,7 +91,7 @@ static inline uint64_t getSize_bitsvec(BitsVec* src){
 	uint64_t offset=0;
 	offset+=sizeof(BitsVec);
 	offset+=(src->size * src->n_bit + 15) / 8;
-	printf("bitsvec: %llu, size: %llu ,cap: %llu \n", offset, src->size,src->cap);
+	// printf("bitsvec: %llu, size: %llu ,cap: %llu \n", offset, src->size,src->cap);
 	return offset;
 }
 
