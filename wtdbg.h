@@ -26,7 +26,7 @@
 #include "pgzf.h"
 #include <getopt.h>
 #include <regex.h>
-// #include "mpi.h"
+#include "mpi.h"
 
 #define WT_MAX_RD			0x3FFFFFFF // 1 G
 #define WT_MAX_RDLEN		0x00FFFFFF // 16 Mb
@@ -717,8 +717,9 @@ lt_timer_start(13, mdbg->t_idx);
 #endif
 mdbg->lt_size = getSize_aux(aux);
 lt_timer_stop(13, mdbg->t_idx); 
-}else if(task == 2){ // 序列化
-	aux->lt_reg = mdbg->reg;
+}else if(mdbg->task == 2){ // 序列化
+	// aux->lt_reg = mdbg->reg;
+	memcpy(&(aux->lt_reg),&(mdbg->reg),sizeof(lt_reg_t));
 	encode_aux(aux,mdbg->lt_buffer);
 }
 lt_timer_stop(9, mdbg->t_idx);
@@ -1312,9 +1313,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	int reset_kbm, n_cpu;
 
 	int j;
-	int *sv = (int*)malloc(nsize*sizeof(int));
-	int *displs = (int*)malloc(nsize*sizeof(int));
-	int *displs_thread = (int*)malloc(ncpu*sizeof(int));
 	int rank=0, nsize=1;
 	char* LT_MPI_send_buffer=NULL;
 	char* LT_MPI_recv_buffer=NULL;
@@ -1328,6 +1326,10 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
     MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
 
+	printf("nsize: %d\n",nsize);
+	int *sv = (int*)malloc(nsize*sizeof(int));
+	int *displs = (int*)malloc(nsize*sizeof(int));
+	int *displs_thread = (int*)malloc(ncpu*sizeof(int));
     // fprintf(stderr, "hello world! process %d of %d\n", rank, nsize);
 
 	thread_prepare(mdbg);
@@ -1475,33 +1477,37 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				mdbg->displ = totalsize_send;
 				displs_thread[mdbg_i] = totalsize_send;
 				totalsize_send+=mdbg->lt_size;
+				printf("%d,%lld\n", rank, mdbg->lt_size);
 			thread_end_iter(mdbg);
+			printf("total size to send: %d\n",totalsize_send);
 			LT_MPI_send_buffer = (char*)malloc(totalsize_send);
 			//设定偏移
 			// 偏置分割：
-			memcpy(LT_MPI_send_buffer,displs_thread,ncpu*sizeof(int))
+			memcpy(LT_MPI_send_buffer,displs_thread,ncpu*sizeof(int));
 			thread_beg_iter(mdbg);
 				mdbg->lt_buffer = LT_MPI_send_buffer + mdbg->displ;
 			thread_end_iter(mdbg);
-			thread_apply_all(mdbg,task=2) // 规约数据到这个buffer里面 
+			thread_apply_all(mdbg,mdbg->task=2) // 规约数据到这个buffer里面 
 			// 获得每个进程buffer的大小
 
 			MPI_Allgather(&totalsize_send, 1, MPI_INT, 
 					sv, 1, MPI_INT, MPI_COMM_WORLD);
 			int totalsize_recv=0;
-			for(int c1=0;c1<nsize;c1++){
+			int c1=0;
+			for(c1=0;c1<nsize;c1++){
 				displs[c1] = totalsize_recv;
 				totalsize_recv+=sv[c1];
 			}
+			printf("total size to rcv: %d\n",totalsize_recv);
 			LT_MPI_recv_buffer = (char*)malloc(totalsize_recv);
 			
-			MPI_Allgatherv(LT_MPI_send_buffer, totalSize, MPI_CHAR,
+			MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
 					LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
 			free(LT_MPI_send_buffer);
 			MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
 
 
-			lt_timer_start(8, 0);
+			lt_timer_start(8, 0); 
 			// 整理结果
 			// thread_beg_iter(mdbg);
 			for(j=0;j<nsize;j++){
@@ -1515,7 +1521,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				int aux_itr=0;
 				for(aux_itr=0;aux_itr<aux_size;aux_itr++){
 					KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
-					decode_aux(cur_buffer+displs_thread[aux_itr]);
+					decode_aux(cur_buffer+displs_thread[aux_itr], aux);
 					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略
 					if((rdflags == NULL || get_bitvec(rdflags, aux->lt_reg.rid) == 0) && aux->lt_reg.closed == 0){
 						// KBMAux *aux = malloc(sizeof(KBMAux));
@@ -1608,7 +1614,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	if(reset_kbm){
 		reset_index_kbm(g->kbm);
 	}			
-	free(sv)
+	free(sv);
 	free(displs);
 	free(displs_thread);
 	MPI_Finalize();
