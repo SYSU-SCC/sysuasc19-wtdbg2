@@ -1465,6 +1465,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					mdbg->reg = (reg_t){0, rid, 0, 0, pb->rdlen, 0, 0};
 					mdbg->task = 1;
 				}else{
+					mdbg->reg.rid = rid;
+					mdbg->reg.closed = 1;
 					mdbg->task = 0; // TODO:: 把没有任务的顺延，不要空载
 				}
 			thread_end_iter(mdbg);
@@ -1616,82 +1618,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	free(displs);
 	free(displs_thread);
 	return nhit;
-}
-
-// static inline 
-void lt_hitresult(lt_arg_struct * lt_arg){
-	// lt_arg_struct* lt_arg = (lt_arg_struct*) arg; 
-	Graph *g =lt_arg->g;
-	struct mdbg_struct * mdbg=lt_arg->mdbg;
-	BitsVec* rdflags=lt_arg->rdflags;
-	kbm_map_t* hit=lt_arg->hit;
-	FILE* alno=lt_arg->alno;
-	u8i *nhit=lt_arg->nhit;
-	BufferedWriter* bw=lt_arg->bw;
-
-	// printf("mdbg: %d\n", 18);
-	// printf("bw: %p\n", bw);
-	// printf("out: %p\n", bw->out);
-	int i=0;
-	if(mdbg->reg.closed == 0){
-		KBMAux *aux = mdbg->aux;
-		if(g->corr_mode && mdbg->cc->cns->size){
-			g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
-		}
-		if(alno){
-			beg_bufferedwriter(bw);
-			if(g->corr_mode && mdbg->cc->cns->size){
-				fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-				println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
-			}
-			for(i=0;i<mdbg->aux->hits->size;i++){
-				hit = ref_kbmmapv(mdbg->aux->hits, i);
-				fprint_hit_kbm(mdbg->aux, i, bw->out);
-			}
-			
-			end_bufferedwriter(bw);
-		}
-		for(i=0;i<mdbg->aux->hits->size;i++){
-			hit = ref_kbmmapv(mdbg->aux->hits, i);
-			if(hit->mat == 0) continue;
-			if(rdflags
-				&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
-				&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
-				&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
-				){
-				one_bitvec(rdflags, hit->tidx);
-			}
-		}
-		
-		if(g->chainning_hits){
-			chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
-		}
-		for(i=0;i<aux->hits->size;i++){
-			hit = ref_kbmmapv(aux->hits, i);
-			if(hit->mat == 0) continue;
-			//hit->qb  /= KBM_BIN_SIZE;
-			//hit->qe  /= KBM_BIN_SIZE;
-			//hit->tb  /= KBM_BIN_SIZE;
-			//hit->te  /= KBM_BIN_SIZE;
-			//hit->aln /= KBM_BIN_SIZE;
-			(*nhit) ++;
-			append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
-			hit->cgoff = g->cigars->size - hit->cglen;
-			// if(raw){
-			// 	hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
-			// } else {
-				map2rdhits_graph(g, hit);
-			// }
-		}
-		// if(KBM_LOG){
-		// 	fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
-		// 	for(i=0;i<mdbg->aux->hits->size;i++){
-		// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
-		// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
-		// 	}
-		// }
-		mdbg->reg.closed = 1;
-	}
 }
 
 static inline void build_nodes_graph(Graph *g, u8i maxbp, int ncpu, FileReader *pws, int rdclip, char *prefix, char *dump_kbm){
