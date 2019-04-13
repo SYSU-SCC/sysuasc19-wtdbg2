@@ -356,7 +356,7 @@ static inline int64_t mm_parse_num(const char *str)
 int main(int argc, char **argv){
 #ifdef HCH_TIMER
 	lt_timer_init();
-	lt_timer_start(TIMER_ALL, 0);
+	lt_timer_start(0, 0);
 #endif
 	Graph *g;
 	KBMPar *par, *rpar;
@@ -1123,7 +1123,7 @@ int main(int argc, char **argv){
 	fprintf(KBM_LOGF, "[%s] Program Done\n", date());
 	END_STAT_PROC_INFO(stderr);
 #ifdef HCH_TIMER
-	lt_timer_stop(TIMER_ALL,0);
+	lt_timer_stop(0,0);
 	lt_timer_finalize();
 #endif
 	return 0;

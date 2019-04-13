@@ -22,11 +22,11 @@
 // #define MPF1_VAPSSM             3
 // #define MPF1_cam_run1           4
 // #define MPF1_HALO               5
-#define TIMER_ALL                           0
-#define TIMER_proc_alignments_core          1
-#define TIMER_index_kbm                     2
-#define TIMER_mdbg                          3
-#define TIMER_write_alignment               4
+// #define TIMER_ALL                           0
+// #define TIMER_proc_alignments_core          1
+// #define TIMER_index_kbm                     2
+// #define TIMER_mdbg                          3
+// #define TIMER_write_alignment               4
 
 
 // //hch intel timer
@@ -120,9 +120,14 @@ void lt_timer_finalize(){
     int i=0,j=0;
     FILE * fp;
     fp = fopen ("hch_timer_profile.csv", "w");
-    fprintf(fp, "all, thread_pgz_func, thread_mdbg_func, thread_midx_func, writeAlign, changeRDFlag, chainning_hit, editGraph, result_time, loop_mdbg, clearkbm, query_index_kbm, map_kbm, sorthit_mat, push_kmer_match_kbm, map_kbm_pre,map_index_sort");
+    fprintf(fp, "all, proc_alignments_core, index_kbm, mdbg, write_alignment, changeRDFlag, chainning_hit, editGraph, result_time, loop_mdbg, clearkbm, query_index_kbm, map_kbm, sorthit_mat, push_kmer_match_kbm, map_kbm_pre,map_index_sort");
     fprintf(fp, "\n");
-    
+// #define TIMER_ALL                           0
+// #define TIMER_proc_alignments_core          1
+// #define TIMER_index_kbm                     2
+// #define TIMER_mdbg                          3
+// #define TIMER_write_alignment               4
+
     // printf("%d,", my_rank);
     // fprintf(fp, "%d,", 0);
     for(i = 0; i < thread_num; i++){

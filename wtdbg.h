@@ -688,7 +688,7 @@ maps[2] = init_u4v(32);
 tidxs = init_u4v(16);
 thread_beg_loop(mdbg);
 #ifdef HCH_TIMER
-	lt_timer_start(TIMER_mdbg, mdbg->t_idx);
+	lt_timer_start(3, mdbg->t_idx);
 #endif
 if(mdbg->task == 1){
 	if(reg->closed) continue;
@@ -732,7 +732,7 @@ if(mdbg->task == 1){
 #endif
 }
 #ifdef HCH_TIMER
-	lt_timer_stop(TIMER_mdbg, mdbg->t_idx);
+	lt_timer_stop(3, mdbg->t_idx);
 #endif
 thread_end_loop(mdbg);
 free_u4v(maps[0]);
@@ -1474,11 +1474,11 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			fprintf(KBM_LOGF, "[%s] indexing bins[%llu,%llu] (%llu bp), %d threads\n", date(), ib, ie, nbp, ncpu); fflush(KBM_LOGF);
 			kmlog = (in > 1)? NULL : open_file_for_write(prefix, ".kmerdep", 1);
 #ifdef HCH_TIMER
-			lt_timer_start(TIMER_index_kbm, 0)
+			lt_timer_start(2, 0);
 #endif
 			index_kbm(g->kbm, ib, ie, ncpu, kmlog);
 #ifdef HCH_TIMER
-	lt_timer_stop(TIMER_index_kbm,0);
+			lt_timer_stop(2,0);
 #endif
 			if(kmlog){
 				fclose(kmlog);
@@ -1537,7 +1537,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 					}
 #ifdef HCH_TIMER
-					lt_timer_start(TIMER_write_alignment, 0);
+					lt_timer_start(4, 0);
 #endif
 					if(alno){
 						beg_bufferedwriter(bw);
@@ -1552,7 +1552,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						end_bufferedwriter(bw);
 					}
 #ifdef HCH_TIMER
-					lt_timer_stop(TIMER_write_alignment, 0);
+					lt_timer_stop(4, 0);
 #endif
 					for(i=0;i<mdbg->aux->hits->size;i++){
 						hit = ref_kbmmapv(mdbg->aux->hits, i);
@@ -1658,11 +1658,11 @@ static inline void build_nodes_graph(Graph *g, u8i maxbp, int ncpu, FileReader *
 	} else {
 		UNUSED(maxbp);
 #ifdef HCH_TIMER
-		lt_timer_start(TIMER_proc_alignments_core,0);
+		lt_timer_start(1,0);
 #endif
 		nhit = proc_alignments_core(g, ncpu, raw, regs, maps, prefix, dump_kbm);
 #ifdef HCH_TIMER
-		lt_timer_stop(TIMER_proc_alignments_core,0);
+		lt_timer_stop(1,0);
 #endif
 	}
 	print_proc_stat_info(0);
