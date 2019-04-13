@@ -2,6 +2,8 @@ VERSION=2.4
 RELEASE=20190312
 
 CC  := gcc
+CX := g++
+
 BIN := /usr/local/bin
 
 ifeq (0, ${MAKELEVEL})
@@ -11,13 +13,14 @@ endif
 ifeq (1, ${DEBUG})
 CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O0 -DDEBUG=1 -DVERSION="$(VERSION)" -DRELEASE="$(RELEASE)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2
 else
-CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O4 -DVERSION="$(VERSION)" -DRELEASE="$(RELEASE)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2
+CFLAGS=-g3 -w -Wall -Wno-unused-but-set-variable -O4 -DVERSION="$(VERSION)" -DRELEASE="$(RELEASE)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2
 endif
-
-GLIBS=-lm -lrt -lpthread -lz
+CFLAGS+= -DLT_STLSORT
+# -DLT_TIMER
+GLIBS=-lm -lrt -lpthread -lz -L./ -llt_sort -lz
 GENERIC_SRC=mem_share.h chararray.h sort.h list.h pgzf.h  sort.h list.h dna.h thread.h filereader.h filewriter.h bitvec.h bit2vec.h bitsvec.h hashset.h
 
-PROGS=kbm2 wtdbg2 wtdbg-cns wtpoa-cns pgzf
+PROGS=ltsort.a kbm2 wtdbg2 wtdbg-cns wtpoa-cns pgzf
 
 all: $(PROGS)
 
@@ -35,6 +38,12 @@ wtpoa-cns: $(GENERIC_SRC) wtpoa.h wtpoa-cns.c poacns.h tripoa.h ksw.h ksw.c
 
 pgzf: mem_share.h sort.h list.h thread.h pgzf.h pgzf.c
 	$(CC) $(CFLAGS) -o $@ pgzf.c $(GLIBS)
+
+lt_sort.o:lt_sort.cpp
+	$(CX) $(CFLAGS) -c lt_sort.cpp -lm -lrt -lpthread -lz -std=c++11
+
+ltsort.a:lt_sort.o
+	ar -crv liblt_sort.a lt_sort.o
 
 clean:
 	rm -f *.o *.gcda *.gcno *.gcov gmon.out $(PROGS)

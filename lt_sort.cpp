@@ -68,11 +68,11 @@ typedef struct {
 } lt_kbm_tmp_bmer_t;
 
 
-    typedef struct {
-        uint32_t poff;
-        uint32_t refidx;
-        unsigned long long bidx:40, koff:24; // u8i
-    } lt_kbm_dpe_t;
+typedef struct {
+    uint32_t poff;
+    uint32_t refidx;
+    unsigned long long bidx:40, koff:24; // u8i
+} lt_kbm_dpe_t;
 
 void lt_sort_kbm_map_t_mat(void* buffer,size_t size,int rank){
 

@@ -722,7 +722,11 @@ if(mdbg->task == 1){
 			}
 		}
 	}
+#ifndef LT_STLSORT
 	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(b.mat, a.mat));
+#else
+	lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size, 1);
+#endif
 }
 thread_end_loop(mdbg);
 free_u4v(maps[0]);

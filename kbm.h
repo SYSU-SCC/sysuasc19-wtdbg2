@@ -2203,12 +2203,20 @@ static inline void map_kbm(KBMAux *aux){
 				if(aux->caches[0]->size * (aux->par->ksize + aux->par->psize) < UInt(aux->par->min_mat)){
 					aux->caches[0]->size = 0;
 				} else {
-					sort_array(aux->caches[0]->buffer, aux->caches[0]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
+					#ifndef LT_STLSORT
+						sort_array(aux->caches[0]->buffer, aux->caches[0]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
+					#else
+						lt_sort_kbm_dpe_t(aux->caches[0]->buffer, aux->caches[0]->size,1);
+					#endif
 				}
 				if(aux->caches[1]->size * (aux->par->ksize + aux->par->psize) < UInt(aux->par->min_mat)){
 					aux->caches[1]->size = 0;
 				} else {
-					sort_array(aux->caches[1]->buffer, aux->caches[1]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
+					#ifndef LT_STLSORT
+						sort_array(aux->caches[1]->buffer, aux->caches[1]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
+					#else
+						lt_sort_kbm_dpe_t(aux->caches[1]->buffer, aux->caches[1]->size,1);
+					#endif
 				}
 					//sort_array(aux->caches[0]->buffer, aux->caches[0]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
 					//sort_array(aux->caches[1]->buffer, aux->caches[1]->size, kbm_dpe_t, num_cmpgtx(a.bidx, b.bidx, a.poff, b.poff));
