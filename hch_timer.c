@@ -22,6 +22,11 @@
 // #define MPF1_VAPSSM             3
 // #define MPF1_cam_run1           4
 // #define MPF1_HALO               5
+#define TIMER_ALL                           0
+#define TIMER_proc_alignments_core          1
+#define TIMER_index_kbm                     2
+#define TIMER_mdbg                          3
+#define TIMER_write_alignment               4
 
 
 // //hch intel timer
