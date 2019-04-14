@@ -286,23 +286,36 @@ typedef struct {
 } KBMAux;
 
 static inline uint64_t getSize_aux(KBMAux* src){
-	// printf("aux: %lld, %lld\n",getSize_kbmmapv(src->hits), getSize_bitsvec(src->cigars));
-	return getSize_kbmmapv(src->hits) + getSize_bitsvec(src->cigars);
+	if(src->lt_reg.closed == 0){
+		// printf("aux: %lld, %lld\n",getSize_kbmmapv(src->hits), getSize_bitsvec(src->cigars));
+		return sizeof(KBMAux) + getSize_kbmmapv(src->hits) + getSize_bitsvec(src->cigars);
+	}else{ // empty one
+		return sizeof(KBMAux); // + getSize_kbmmapv(src->hits) + getSize_bitsvec(src->cigars);
+	}
+
 }
 
 static inline uint64_t encode_aux(KBMAux* src, char* dest){
-	uint64_t offset=0;
-	offset += encode_kbmmapv(src->hits, dest+offset);
-	offset += encode_bitsvec(src->cigars, dest+offset);
+	uint64_t offset=sizeof(KBMAux);
+	memcpy(dest,src,sizeof(KBMAux));
+	if(src->lt_reg.closed == 0){
+		offset += encode_kbmmapv(src->hits, dest+offset);
+		offset += encode_bitsvec(src->cigars, dest+offset);
+	}
+
 	return offset;
 }
 
 static inline uint64_t decode_aux(char* src, KBMAux* dest){
 	uint64_t offset=0;
-	dest->hits = (kbmmapv*)malloc(sizeof(kbmmapv));
-	offset += decode_kbmmapv(src+offset, dest->hits);
-	dest->cigars = calloc(1, sizeof(BitsVec));;
-	offset += decode_bitsvec(src+offset, dest->cigars);
+	memcpy(dest,src,sizeof(KBMAux));
+	offset += sizeof(KBMAux);
+	if(dest->lt_reg.closed == 0){
+		dest->hits = (kbmmapv*)malloc(sizeof(kbmmapv));
+		offset += decode_kbmmapv(src+offset, dest->hits);
+		dest->cigars = calloc(1, sizeof(BitsVec));;
+		offset += decode_bitsvec(src+offset, dest->cigars);
+	}
 	return offset;
 }
 
