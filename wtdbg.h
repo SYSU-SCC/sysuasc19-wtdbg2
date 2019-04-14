@@ -26,7 +26,7 @@
 #include "pgzf.h"
 #include <getopt.h>
 #include <regex.h>
-// #include "mpi.h"
+#include "mpi.h"
 
 #define WT_MAX_RD			0x3FFFFFFF // 1 G
 #define WT_MAX_RDLEN		0x00FFFFFF // 16 Mb
@@ -1319,10 +1319,10 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	char* LT_MPI_send_buffer=NULL;
 	char* LT_MPI_recv_buffer=NULL;
 
-	// MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
-    // MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
+    MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
 
-	printf("nsize: %d\n",nsize);
+	// printf("nsize: %d\n",nsize);
 	int *sv = (int*)malloc(nsize*sizeof(int));
 	int *displs = (int*)malloc(nsize*sizeof(int));
 	int *displs_thread = (int*)malloc(ncpu*sizeof(int));
@@ -1489,11 +1489,11 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				mdbg->lt_buffer = LT_MPI_send_buffer + mdbg->displ;
 			thread_end_iter(mdbg);
 			thread_apply_all(mdbg,mdbg->task=2) // 规约数据到这个buffer里面 
-			// // // // 获得每个进程buffer的大小
+			// 获得每个进程buffer的大小
 
-			// // // // MPI_Allgather(&totalsize_send, 1, MPI_INT, 
-			// // // // 		sv, 1, MPI_INT, MPI_COMM_WORLD);
-			sv[0] = totalsize_send;
+			MPI_Allgather(&totalsize_send, 1, MPI_INT, 
+					sv, 1, MPI_INT, MPI_COMM_WORLD);
+			// sv[0] = totalsize_send;
 			
 			// MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
 			u4i totalsize_recv=0;
@@ -1505,9 +1505,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			// fprintf(stderr,"pre %u\n", totalsize_recv);
 			LT_MPI_recv_buffer = (char*) malloc(totalsize_recv*sizeof(char));
 			// fprintf(stderr,"after\n");
-			// // MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
-			// // 		LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
-			memcpy(LT_MPI_recv_buffer,LT_MPI_send_buffer, totalsize_recv);
+			MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
+					LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
+			// memcpy(LT_MPI_recv_buffer,LT_MPI_send_buffer, totalsize_recv);
 
 			// // // MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
 			free(LT_MPI_send_buffer);

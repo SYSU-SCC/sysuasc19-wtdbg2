@@ -1,9 +1,9 @@
 VERSION=2.3
 
-# CC  := mpiicc
-# CX := mpiicc
-CC  := gcc
-CX := g++
+CC  := mpiicc
+CX := mpiicc
+# CC  := gcc
+# CX := g++
 BIN := /usr/local/bin
 
 ifeq (0, ${MAKELEVEL})
