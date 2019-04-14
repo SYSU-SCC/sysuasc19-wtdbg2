@@ -1316,13 +1316,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	int rank=0, nsize=1;
 	char* LT_MPI_send_buffer=NULL;
 	char* LT_MPI_recv_buffer=NULL;
-	int provided;
-	// MPI_Init_thread(NULL, NULL,MPI_THREAD_MULTIPLE, &provided);
-	// if(provided != MPI_THREAD_MULTIPLE)
-	// {
-	// 	fprintf(stderr, "MPI do not Support Multiple thread\n");
-	// 	exit(0);
-	// }
+
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
     MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
 
@@ -1474,7 +1468,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			thread_apply_all(mdbg,lt666=1);// 带有 wait
 
 			// 统合结果
-			int totalsize_send = ncpu*sizeof(int); // 偏置数组
+			int totalsize_send = ncpu*sizeof(int); // 线程的偏置数组的位置
 			thread_beg_iter(mdbg);
 				mdbg->displ = totalsize_send;
 				displs_thread[mdbg_i] = totalsize_send;
@@ -1484,7 +1478,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			LT_MPI_send_buffer = (char*)malloc(totalsize_send);
 			//设定偏移
 			// 偏置分割：
-			memcpy(LT_MPI_send_buffer,displs_thread,ncpu*sizeof(int));
+			memcpy(LT_MPI_send_buffer,displs_thread,ncpu*sizeof(int));  // 偏置矩阵放在头部
 			thread_beg_iter(mdbg);
 				mdbg->lt_buffer = LT_MPI_send_buffer + mdbg->displ;
 			thread_end_iter(mdbg);
@@ -1493,6 +1487,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 
 			MPI_Allgather(&totalsize_send, 1, MPI_INT, 
 					sv, 1, MPI_INT, MPI_COMM_WORLD);
+			
+			MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
 			int totalsize_recv=0;
 			int c1=0;
 			for(c1=0;c1<nsize;c1++){
@@ -1504,8 +1500,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			
 			MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
 					LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
-			free(LT_MPI_send_buffer);
 			MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
+			free(LT_MPI_send_buffer);
 
 
 			lt_timer_start(8, 0); 
@@ -1523,7 +1519,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				for(aux_itr=0;aux_itr<aux_size;aux_itr++){
 					KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
 					decode_aux(cur_buffer+displs_thread[aux_itr], aux);
-					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略
+					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略 // 跟close一样，似乎没什么的
 					if((rdflags == NULL || get_bitvec(rdflags, aux->lt_reg.rid) == 0) && aux->lt_reg.closed == 0){
 						// KBMAux *aux = malloc(sizeof(KBMAux));
 						// decode_aux(mdbg->lt_buffer,aux);

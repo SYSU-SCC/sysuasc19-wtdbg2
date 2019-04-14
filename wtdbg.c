@@ -326,7 +326,14 @@ static inline int64_t mm_parse_num(const char *str)
 
 int main(int argc, char **argv){
 	printf("init MPI: \n");
-	MPI_Init( &argc, &argv );
+	// MPI_Init( &argc, &argv );
+	int provided;
+	MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+	if(provided != MPI_THREAD_MULTIPLE)
+	{
+		fprintf(stderr, "MPI do not Support Multiple thread\n");
+		exit(0);
+	}
 #ifdef LT_TIMER
 	lt_timer_init();
 	lt_timer_start(0, 0);
