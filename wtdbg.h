@@ -719,8 +719,7 @@ lt_timer_start(13, mdbg->t_idx);
 	lt_timer_stop(13, mdbg->t_idx); 
 }else if(mdbg->task == 2){ // 序列化
 	// aux->lt_reg = mdbg->reg;
-	printf("displ: %d, lt_size: %d  end: %d\n",mdbg->displ,mdbg->lt_size,mdbg->displ+mdbg->lt_size);
-	memcpy(&(aux->lt_reg),&(mdbg->reg),sizeof(lt_reg_t));
+	// printf("displ: %d, lt_size: %d  end: %d\n",mdbg->displ,mdbg->lt_size,mdbg->displ+mdbg->lt_size);
 	encode_aux(aux, mdbg->lt_buffer);
 	mdbg->lt_size = 0;
 }else{
@@ -1478,7 +1477,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				displs_thread[mdbg_i] = totalsize_send;
 				totalsize_send+=mdbg->lt_size;
 			thread_end_iter(mdbg);
-			printf("total size: %d\n",totalsize_send);
 			// printf("total size to send: %d\n",totalsize_send);
 			LT_MPI_send_buffer = (char*)malloc(totalsize_send);
 			//设定偏移
@@ -1492,21 +1490,21 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 
 			// // // // MPI_Allgather(&totalsize_send, 1, MPI_INT, 
 			// // // // 		sv, 1, MPI_INT, MPI_COMM_WORLD);
-			// sv[0] = totalsize_send;
+			sv[0] = totalsize_send;
 			
-			// // // MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
-			// // u4i totalsize_recv=0;
-			// // int c1=0;
-			// // for(c1=0;c1<nsize;c1++){
-			// // 	displs[c1] = totalsize_recv;
-			// // 	totalsize_recv+=sv[c1];
-			// // }
-			// // fprintf(stderr,"pre %u\n", totalsize_recv);
-			// // LT_MPI_recv_buffer = (char*)calloc(totalsize_recv,sizeof(char)); //  malloc(totalsize_recv*sizeof(char));
-			// // fprintf(stderr,"after\n");
-			// // // MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
-			// // // 		LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
-			// // memcpy(LT_MPI_recv_buffer,LT_MPI_send_buffer, totalsize_recv);
+			// MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
+			u4i totalsize_recv=0;
+			int c1=0;
+			for(c1=0;c1<nsize;c1++){
+				displs[c1] = totalsize_recv;
+				totalsize_recv+=sv[c1];
+			}
+			// fprintf(stderr,"pre %u\n", totalsize_recv);
+			LT_MPI_recv_buffer = (char*) malloc(totalsize_recv*sizeof(char));
+			// fprintf(stderr,"after\n");
+			// // MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
+			// // 		LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
+			memcpy(LT_MPI_recv_buffer,LT_MPI_send_buffer, totalsize_recv);
 
 			// // // MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
 			free(LT_MPI_send_buffer);
@@ -1605,7 +1603,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				// } // end process a processer's work
 			// }
 			thread_end_iter(mdbg);
-			// free(LT_MPI_recv_buffer);
+			free(LT_MPI_recv_buffer);
 		}
 	}
 	thread_beg_close(mdbg);
