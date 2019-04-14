@@ -715,15 +715,16 @@ lt_timer_start(13, mdbg->t_idx);
 #else
 	lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size,0);
 #endif
-mdbg->lt_size = getSize_aux(aux);
-lt_timer_stop(13, mdbg->t_idx); 
+	mdbg->lt_size = getSize_aux(aux);
+	lt_timer_stop(13, mdbg->t_idx); 
 }else if(mdbg->task == 2){ // 序列化
 	// aux->lt_reg = mdbg->reg;
+	printf("displ: %d, lt_size: %d  end: %d\n",mdbg->displ,mdbg->lt_size,mdbg->displ+mdbg->lt_size);
 	memcpy(&(aux->lt_reg),&(mdbg->reg),sizeof(lt_reg_t));
 	encode_aux(aux, mdbg->lt_buffer);
 	mdbg->lt_size = 0;
 }else{
-	mdbg->lt_size = 0;
+	mdbg->lt_size = getSize_aux(aux);
 }
 lt_timer_stop(9, mdbg->t_idx);
 thread_end_loop(mdbg);
@@ -1477,6 +1478,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				displs_thread[mdbg_i] = totalsize_send;
 				totalsize_send+=mdbg->lt_size;
 			thread_end_iter(mdbg);
+			printf("total size: %d\n",totalsize_send);
 			// printf("total size to send: %d\n",totalsize_send);
 			LT_MPI_send_buffer = (char*)malloc(totalsize_send);
 			//设定偏移
