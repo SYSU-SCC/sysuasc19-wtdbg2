@@ -718,7 +718,6 @@ lt_timer_start(13, mdbg->t_idx);
 	mdbg->lt_size = getSize_aux(aux);
 	lt_timer_stop(13, mdbg->t_idx); 
 }else if(mdbg->task == 2){ // 序列化
-	// aux->lt_reg = mdbg->reg;
 	// printf("displ: %d, lt_size: %d  end: %d\n",mdbg->displ,mdbg->lt_size,mdbg->displ+mdbg->lt_size);
 	encode_aux(aux, mdbg->lt_buffer);
 	mdbg->lt_size = 0;
@@ -1460,10 +1459,14 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
 					pb = ref_kbmreadv(g->kbm->reads, rid);
 					mdbg->reg = (reg_t){0, rid, 0, 0, pb->rdlen, 0, 0};
+					mdbg->aux->lt_rid = rid;
+					mdbg->aux->lt_closed = 0;
 					mdbg->task = 1;
 				}else{
 					mdbg->reg.rid = rid;
 					mdbg->reg.closed = 1;
+					mdbg->aux->lt_rid = rid;
+					mdbg->aux->lt_closed = 1;
 					mdbg->task = 0; // TODO:: 把没有任务的顺延，不要空载
 				}
 			thread_end_iter(mdbg);
@@ -1512,24 +1515,24 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 
 			lt_timer_start(8, 0); 
 			// 整理结果
-			// thread_beg_iter(mdbg);
-			for(j=0;j<nsize;j++){
+			thread_beg_iter(mdbg);
+			// for(j=0;j<nsize;j++){
 				// // 通过displs获得当前进程的结果
-				char* cur_buffer=LT_MPI_recv_buffer + displs[j];
+				// char* cur_buffer=LT_MPI_recv_buffer + displs[j];
 				// // TODO：从buffer中解析到KBM数组之中,并得到个数
-				int aux_size=ncpu; 
+				// int aux_size=ncpu; 
 				// //假定现在的就是每个进程都开相同数目的线程,会有一些没用的字段，但是不多，暂时不管
 				// //解析偏置
-				memcpy(displs_thread,cur_buffer,ncpu*sizeof(int));
-				int aux_itr=0;
-				for(aux_itr=0;aux_itr<aux_size;aux_itr++){
-					KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
-					decode_aux(cur_buffer+displs_thread[aux_itr], aux);
+				// memcpy(displs_thread,cur_buffer,ncpu*sizeof(int));
+				// int aux_itr=0;
+				// for(aux_itr=0;aux_itr<aux_size;aux_itr++){
+					KBMAux* aux = mdbg->aux;
+					// KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
+					// decode_aux(cur_buffer+displs_thread[aux_itr], aux);
+					// encode_aux(mdbg->aux,tempbuffer);
+					// decode_aux(tempbuffer,aux);
 					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略 // 跟close一样，似乎没什么的
-					if((rdflags == NULL || get_bitvec(rdflags, aux->lt_reg.rid) == 0) && aux->lt_reg.closed == 0){
-						// KBMAux* aux = mdbg->aux;
-						// encode_aux(mdbg->aux,tempbuffer);
-						// decode_aux(mdbg->lt_buffer,aux);
+					if((rdflags == NULL || get_bitvec(rdflags, aux->lt_rid) == 0) && aux->lt_closed == 0){
 						// if(g->corr_mode && mdbg->cc->cns->size){
 						// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 						// }
@@ -1593,14 +1596,14 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						// }
 
 						// lt_free_aux(aux);
-						free(aux->cigars);
-						free(aux->hits);
-						free(aux);
+						// free(aux->cigars);
+						// free(aux->hits);
+						// free(aux);
 						mdbg->reg.closed = 1;
 					}//end a thread's result
-				} // end process a processer's work
-			}
-			// thread_end_iter(mdbg);
+				// } // end process a processer's work
+			// }
+			thread_end_iter(mdbg);
 			free(LT_MPI_recv_buffer);
 		}
 	}
