@@ -1515,20 +1515,20 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 
 			lt_timer_start(8, 0); 
 			// 整理结果
-			thread_beg_iter(mdbg);
-			// for(j=0;j<nsize;j++){
+			// thread_beg_iter(mdbg);
+			for(j=0;j<nsize;j++){
 				// // 通过displs获得当前进程的结果
-				// char* cur_buffer=LT_MPI_recv_buffer + displs[j];
+				char* cur_buffer=LT_MPI_recv_buffer + displs[j];
 				// // TODO：从buffer中解析到KBM数组之中,并得到个数
-				// int aux_size=ncpu; 
+				int aux_size=ncpu; 
 				// //假定现在的就是每个进程都开相同数目的线程,会有一些没用的字段，但是不多，暂时不管
 				// //解析偏置
-				// memcpy(displs_thread,cur_buffer,ncpu*sizeof(int));
-				// int aux_itr=0;
-				// for(aux_itr=0;aux_itr<aux_size;aux_itr++){
-					KBMAux* aux = mdbg->aux;
-					// KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
-					// decode_aux(cur_buffer+displs_thread[aux_itr], aux);
+				memcpy(displs_thread,cur_buffer,ncpu*sizeof(int));
+				int aux_itr=0;
+				for(aux_itr=0;aux_itr<aux_size;aux_itr++){
+					// KBMAux* aux = mdbg->aux;
+					KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
+					decode_aux(cur_buffer+displs_thread[aux_itr], aux);
 					// encode_aux(mdbg->aux,tempbuffer);
 					// decode_aux(tempbuffer,aux);
 					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略 // 跟close一样，似乎没什么的
@@ -1596,14 +1596,14 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						// }
 
 						// lt_free_aux(aux);
-						// free(aux->cigars);
-						// free(aux->hits);
-						// free(aux);
+						free(aux->cigars);
+						free(aux->hits);
+						free(aux);
 						mdbg->reg.closed = 1;
 					}//end a thread's result
-				// } // end process a processer's work
-			// }
-			thread_end_iter(mdbg);
+				} // end process a processer's work
+			}
+			// thread_end_iter(mdbg);
 			free(LT_MPI_recv_buffer);
 		}
 	}
