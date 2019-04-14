@@ -1512,26 +1512,24 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 
 			lt_timer_start(8, 0); 
 			// 整理结果
-			thread_beg_iter(mdbg);
-			// for(j=0;j<nsize;j++){
+			// thread_beg_iter(mdbg);
+			for(j=0;j<nsize;j++){
 				// // 通过displs获得当前进程的结果
-				// char* cur_buffer=LT_MPI_recv_buffer + displs[j];
+				char* cur_buffer=LT_MPI_recv_buffer + displs[j];
 				// // TODO：从buffer中解析到KBM数组之中,并得到个数
-				// int aux_size=ncpu; 
+				int aux_size=ncpu; 
 				// //假定现在的就是每个进程都开相同数目的线程,会有一些没用的字段，但是不多，暂时不管
 				// //解析偏置
-				// memcpy(displs_thread,cur_buffer,ncpu*sizeof(int));
-				// int aux_itr=0;
-				// for(aux_itr=0;aux_itr<aux_size;aux_itr++){
-					// KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
-					// decode_aux(cur_buffer+displs_thread[aux_itr], aux);
+				memcpy(displs_thread,cur_buffer,ncpu*sizeof(int));
+				int aux_itr=0;
+				for(aux_itr=0;aux_itr<aux_size;aux_itr++){
+					KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
+					decode_aux(cur_buffer+displs_thread[aux_itr], aux);
 					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略 // 跟close一样，似乎没什么的
-					if((rdflags == NULL || get_bitvec(rdflags, mdbg->reg.rid) == 0) && mdbg->reg.closed == 0){
-						KBMAux* aux = mdbg->aux;
-						// KBMAux *aux = malloc(sizeof(KBMAux));
-						// char * tempbuffer = (char*) malloc(mdbg->lt_size);
+					if((rdflags == NULL || get_bitvec(rdflags, aux->lt_reg.rid) == 0) && aux->lt_reg.closed == 0){
+						// KBMAux* aux = mdbg->aux;
 						// encode_aux(mdbg->aux,tempbuffer);
-						// decode_aux(tempbuffer,aux);
+						// decode_aux(mdbg->lt_buffer,aux);
 						// if(g->corr_mode && mdbg->cc->cns->size){
 						// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 						// }
@@ -1595,14 +1593,14 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						// }
 
 						// lt_free_aux(aux);
-						// free(aux->cigars);
-						// free(aux->hits);
-						// free(aux);
+						free(aux->cigars);
+						free(aux->hits);
+						free(aux);
 						mdbg->reg.closed = 1;
 					}//end a thread's result
-				// } // end process a processer's work
-			// }
-			thread_end_iter(mdbg);
+				} // end process a processer's work
+			}
+			// thread_end_iter(mdbg);
 			free(LT_MPI_recv_buffer);
 		}
 	}
