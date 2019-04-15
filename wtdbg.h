@@ -1445,31 +1445,53 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 		mdbg->task = 1;
 		thread_end_iter(mdbg);
 
-		int rrid=qb;
-		// for(rid=qb;rid<=qe+ncpu;rid++){
-		for(rrid=qb;rrid<=qe;rrid+=ncpu*nsize){
-			int rstart=rrid + ncpu*rank;
-			int rend=rstart + ncpu;
-			rend = rend > qe?qe:rend;
+		int got_size=0;
 
+		rid=qb;
+		// for(rid=qb;rid<=qe+ncpu;rid++){
+		while(rid<=qe){
+			// rid += ncpu*rank;
+			got_size=ncpu*rank;
+			while(got_size-->0){
+				while(rid<qe && !(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)) ){
+					rid++;
+				}
+				rid++;// 也要加，因为要被拿走
+			}
+
+			// 开始寻找
 			// 唤起，看起来使用wake all会更好
 			thread_beg_iter(mdbg); // get_bitvec(rdflags, rid) == 0 这个应该做一下负载均衡，不过先跑起来
-				rid = rstart+ mdbg_i;
+				while(rid<qe && !(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)) ){
+					rid++;
+				}
+
 				if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
-					if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
+					if(!KBM_LOG && ((rid - qb) % 200) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
 					pb = ref_kbmreadv(g->kbm->reads, rid);
 					mdbg->reg = (reg_t){0, rid, 0, 0, pb->rdlen, 0, 0};
 					mdbg->aux->lt_rid = rid;
 					mdbg->aux->lt_closed = 0;
 					mdbg->task = 1;
-				}else{
+				}else{// 最后一轮轮空
 					mdbg->reg.rid = rid;
 					mdbg->reg.closed = 1;
 					mdbg->aux->lt_rid = rid;
 					mdbg->aux->lt_closed = 1;
 					mdbg->task = 0; // TODO:: 把没有任务的顺延，不要空载
 				}
+				rid++;
 			thread_end_iter(mdbg);
+
+			// rid += ncpu*(nsize -rank -1);
+			got_size=ncpu*(nsize - rank - 1);
+			while(got_size-->0){
+				while(rid<qe && !(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)) ){
+					rid++;
+				}
+				rid++;// 也要加，因为要被拿走
+			}
+
 			int lt666=0;
 			thread_apply_all(mdbg,lt666=1);// 带有 wait
 
@@ -1532,7 +1554,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					// encode_aux(mdbg->aux,tempbuffer);
 					// decode_aux(tempbuffer,aux);
 					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略 // 跟close一样，似乎没什么的
-					if((rdflags == NULL || get_bitvec(rdflags, aux->lt_rid) == 0) && aux->lt_closed == 0){
+					if(aux->lt_closed == 0 && (rdflags == NULL || get_bitvec(rdflags, aux->lt_rid) == 0)){
 						// if(g->corr_mode && mdbg->cc->cns->size){
 						// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 						// }
