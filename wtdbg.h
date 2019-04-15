@@ -663,9 +663,6 @@ uint64_t displ;
 thread_end_def(mdbg);
 
 thread_beg_func(mdbg);
-#ifdef LT_TIMER
-lt_timer_start(2, mdbg->t_idx);
-#endif
 Graph *g;
 KBM *kbm;
 KBMAux *aux;
@@ -686,7 +683,6 @@ mdbg->lt_buffer = NULL;
 mdbg->lt_size = 0;
 mdbg->displ=0;
 thread_beg_loop(mdbg);
-lt_timer_start(9, mdbg->t_idx); 
 if(mdbg->task == 1){
 	if(reg->closed) continue;
 	if(g->corr_mode){
@@ -697,26 +693,15 @@ if(mdbg->task == 1){
 		// }
 		// lt_timer_stop(10, mdbg->t_idx);
 	} else {
-		
-		lt_timer_start(11, mdbg->t_idx); 
 		query_index_kbm(aux, NULL, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg);
-		lt_timer_stop(11, mdbg->t_idx);
-		lt_timer_start(12, mdbg->t_idx); 
-#ifdef LT_TIMER
-		map_kbm_timer(aux, mdbg->t_idx);
-#else
 		map_kbm(aux);
-#endif
-		lt_timer_stop(12, mdbg->t_idx);
 	}
-lt_timer_start(13, mdbg->t_idx); 
 #ifndef LT_STLSORT
 	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(b.mat, a.mat));
 #else
 	lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size,0);
 #endif
 	mdbg->lt_size = getSize_aux(aux);
-	lt_timer_stop(13, mdbg->t_idx); 
 }else if(mdbg->task == 2){ // 序列化
 	// printf("displ: %d, lt_size: %d  end: %d\n",mdbg->displ,mdbg->lt_size,mdbg->displ+mdbg->lt_size);
 	encode_aux(aux, mdbg->lt_buffer);
@@ -724,14 +709,10 @@ lt_timer_start(13, mdbg->t_idx);
 }else{
 	mdbg->lt_size = getSize_aux(aux);
 }
-lt_timer_stop(9, mdbg->t_idx);
 thread_end_loop(mdbg);
 free_u4v(maps[0]);
 free_u4v(maps[1]);
 free_u4v(maps[2]);
-#ifdef LT_TIMER
-lt_timer_stop(2 , mdbg->t_idx);
-#endif
 thread_end_func(mdbg);
 
 typedef struct {
@@ -1316,8 +1297,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 
 	int j;
 	int rank=0, nsize=1;
-	char* LT_MPI_send_buffer=NULL;
-	char* LT_MPI_recv_buffer=NULL;
+	char* LT_MPI_send_buffer=(char*)malloc(2*(u8i)1024*1024*1024);;
+	char* LT_MPI_recv_buffer=(char*)malloc(2*(u8i)1024*1024*1024);;
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);//获得进程号
     MPI_Comm_size(MPI_COMM_WORLD, &nsize);//返回通信子的进程数
@@ -1515,14 +1496,13 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						displs[c1] = totalsize_recv;
 						totalsize_recv+=sv[c1];
 					}
-					LT_MPI_recv_buffer = (char*) malloc(totalsize_recv*sizeof(char));
+					// LT_MPI_recv_buffer = (char*) malloc(totalsize_recv*sizeof(char));
 					MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
 							LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
 
-					free(LT_MPI_send_buffer);
+					// free(LT_MPI_send_buffer);
 				}
 
-				lt_timer_start(8, 0); 
 				// 整理结果，需要recv buffer
 				{
 					for(j=0;j<nsize;j++){
@@ -1561,7 +1541,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 								// }
 								// lt_timer_stop(4, 0);
 
-								lt_timer_start(5, 0);
 								for(i=0;i<aux->hits->size;i++){
 									hit = ref_kbmmapv(aux->hits, i);
 									if(hit->mat == 0) continue;
@@ -1573,13 +1552,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 										one_bitvec(rdflags, hit->tidx);
 									}
 								}
-								lt_timer_stop(5, 0);
-
-								lt_timer_start(6, 0);
 								if(g->chainning_hits){
 									chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 								}
-								lt_timer_stop(6, 0);
 								
 								for(i=0;i<aux->hits->size;i++){
 									hit = ref_kbmmapv(aux->hits, i);
@@ -1590,9 +1565,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 									if(raw){
 										// hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
 									} else {
-										lt_timer_start(7, 0);
 										map2rdhits_graph(g, hit);
-										lt_timer_stop(7, 0);
 									}
 								}
 								// if(KBM_LOG){
@@ -1611,7 +1584,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 							}//end a thread's result
 						} // end process a processer's work
 					}
-					free(LT_MPI_recv_buffer);
+					// free(LT_MPI_recv_buffer);
 				}
 			}else{
 				lt_firstflag=1;
@@ -1629,7 +1602,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					totalsize_send+=mdbg->lt_size;
 				thread_end_iter(mdbg);
 				// printf("total size to send: %d\n",totalsize_send);
-				LT_MPI_send_buffer = (char*)malloc(totalsize_send);
+				// LT_MPI_send_buffer = (char*)malloc(totalsize_send);
 				//设定偏移
 				// 偏置分割：
 				memcpy(LT_MPI_send_buffer,displs_thread,ncpu*sizeof(int));  // 偏置矩阵放在头部
@@ -1657,14 +1630,13 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					displs[c1] = totalsize_recv;
 					totalsize_recv+=sv[c1];
 				}
-				LT_MPI_recv_buffer = (char*) malloc(totalsize_recv*sizeof(char));
+				// LT_MPI_recv_buffer = (char*) malloc(totalsize_recv*sizeof(char));
 				MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
 						LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
 
-				free(LT_MPI_send_buffer);
+				// free(LT_MPI_send_buffer);
 			}
 
-			lt_timer_start(8, 0); 
 			// 整理结果，需要recv buffer
 			{
 				for(j=0;j<nsize;j++){
@@ -1703,7 +1675,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 							// }
 							// lt_timer_stop(4, 0);
 
-							lt_timer_start(5, 0);
 							for(i=0;i<aux->hits->size;i++){
 								hit = ref_kbmmapv(aux->hits, i);
 								if(hit->mat == 0) continue;
@@ -1715,13 +1686,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 									one_bitvec(rdflags, hit->tidx);
 								}
 							}
-							lt_timer_stop(5, 0);
-
-							lt_timer_start(6, 0);
 							if(g->chainning_hits){
 								chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 							}
-							lt_timer_stop(6, 0);
 							
 							for(i=0;i<aux->hits->size;i++){
 								hit = ref_kbmmapv(aux->hits, i);
@@ -1732,9 +1699,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 								if(raw){
 									// hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
 								} else {
-									lt_timer_start(7, 0);
 									map2rdhits_graph(g, hit);
-									lt_timer_stop(7, 0);
 								}
 							}
 							// if(KBM_LOG){
@@ -1753,7 +1718,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						}//end a thread's result
 					} // end process a processer's work
 				}
-				free(LT_MPI_recv_buffer);
+				// free(LT_MPI_recv_buffer);
 			}
 		}
 
@@ -1772,7 +1737,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	if(rdflags) free_bitvec(rdflags);
 	if(reset_kbm){
 		reset_index_kbm(g->kbm);
-	}			
+	}		
+	free(LT_MPI_send_buffer);	
+	free(LT_MPI_recv_buffer);
 	free(sv);
 	free(displs);
 	free(displs_thread);

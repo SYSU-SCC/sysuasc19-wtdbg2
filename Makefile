@@ -15,7 +15,8 @@ CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O0 -DDEBUG=1 -DTIMESTAMP="$(TI
 else
 CFLAGS=-g -w -Wno-unused-but-set-variable -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2
 endif
-CFLAGS+= -DLT_TIMER
+CFLAGS+=
+# -DLT_TIMER
 # -DLT_STLSORT
 # -DLT_HIT
 # -DLT_TASK_REVERSE
