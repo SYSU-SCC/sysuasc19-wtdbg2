@@ -1641,6 +1641,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 #endif
 					// if (temp_wyf_offset >= wyf_offset){break;}
 					temp_wyf_offset += decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[i]);
+#ifdef DEBUG
+					fprintf(stderr, "[debug rank %d] i : %d decode over!!!!\n", my_rank, i);
+#endif
 					KBMAux *aux = wyf_mdbg[i].aux;
 					// if(g->corr_mode && mdbg->cc->cns->size){
 					// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
