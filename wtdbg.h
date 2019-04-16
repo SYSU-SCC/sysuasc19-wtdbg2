@@ -1614,7 +1614,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				fprintf(stderr, "[debug rank : %d] rstart : %d\n", my_rank, rstart);
 				fprintf(stderr, "[debug rank : %d] rend : %d\n", my_rank, rend);
 #endif
-
 				if (batch_i == loop_size){
 					// 这是最后一次循环了，已经没有新的计算需要唤起
 					for (i = 0; i < ncpu; i++){
@@ -1738,9 +1737,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					// 	}
 					// 	end_bufferedwriter(bw);
 					// }
-	#ifdef HCH_TIMER
+#ifdef HCH_TIMER
 					lt_timer_stop(4, 0);
-	#endif
+#endif
 					for(i=0;i< aux->hits->size;i++){
 						hit = ref_kbmmapv( aux->hits, i);
 						if(hit->mat == 0) continue;
