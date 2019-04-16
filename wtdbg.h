@@ -1714,8 +1714,14 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 #endif
 					free(wyf_mdbg[i].aux->hits->buffer);
 					free(wyf_mdbg[i].aux->hits);
+#ifdef DEBUG
+					fprintf(stderr, "[debug rank %d] i : %d: free(wyf_mdbg[i].aux->hits);!!!!\n", my_rank, i);
+#endif
 					free(wyf_mdbg[i].aux->cigars->bits);
 					free(wyf_mdbg[i].aux->cigars);
+#ifdef DEBUG
+					fprintf(stderr, "[debug rank %d] i : %d: free(wyf_mdbg[i].aux->cigars);!!!!\n", my_rank, i);
+#endif
 					free(wyf_mdbg[i].aux);
 				}
 			}
