@@ -1633,13 +1633,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 							if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
 							thread_wait_one(mdbg);
 						}
-
-						if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
-							pb = ref_kbmreadv(g->kbm->reads, rid);
-							mdbg->reg = (reg_t){0, rid, 0, 0, pb->bincnt, 0, 0};
-							thread_wake(mdbg);
-						}
-						while (mdbg->state);
 						if(mdbg->reg.closed == 0){
 #ifdef DEBUG
 						// fprintf(stderr, "[debug rank %d]  mdbg->aux->hits->size : %u\n", my_rank,  mdbg->aux->hits->size);
@@ -1647,6 +1640,13 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 							wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
 							mdbg->reg.closed = 1;
 						}
+						if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
+							pb = ref_kbmreadv(g->kbm->reads, rid);
+							mdbg->reg = (reg_t){0, rid, 0, 0, pb->bincnt, 0, 0};
+							thread_wake(mdbg);
+						}
+
+
 					}
 				}
 #ifdef DEBUG
