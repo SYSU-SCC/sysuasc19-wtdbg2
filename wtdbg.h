@@ -1634,6 +1634,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 #ifdef DEBUG
 				fprintf(stderr, "[debug rank : %d] wake complete!\n", my_rank);
 				temp_wyf_offset = 0;
+#endif
 				for(i = 0; i < batch_size; i++){
 #ifdef DEBUG
 					fprintf(stderr, "[debug rank %d] i : %d write result!!!!\n", my_rank, i);
