@@ -1523,14 +1523,19 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			thread_beg_iter(mdbg);
 			mdbg->task = 1;
 			thread_end_iter(mdbg);
-			for(rid=qb;rid<=qe+ncpu;rid++){
+			int i = 0;
+			for(rid=qb;rid<qe;rid++){
 				if(rid < qe){
 					if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
 					thread_wait_one(mdbg);
-				} else {
-					thread_wait_next(mdbg);
-					pb = NULL;
 				}
+
+				if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
+					pb = ref_kbmreadv(g->kbm->reads, rid);
+					mdbg->reg = (reg_t){0, rid, 0, 0, pb->bincnt, 0, 0};
+					thread_wake(mdbg);
+				}
+				while (mdbg->state);
 				if(mdbg->reg.closed == 0){
 					KBMAux *aux = mdbg->aux;
 					if(g->corr_mode && mdbg->cc->cns->size){
@@ -1594,11 +1599,10 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					}
 					mdbg->reg.closed = 1;
 				}
-				if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
-					pb = ref_kbmreadv(g->kbm->reads, rid);
-					mdbg->reg = (reg_t){0, rid, 0, 0, pb->bincnt, 0, 0};
-					thread_wake(mdbg);
-				}
+			}
+			for (i = 0; i < ncpu; i++){
+				thread_wait_next(mdbg);
+				pb = NULL;
 			}
 		}
 		if(!KBM_LOG) fprintf(KBM_LOGF, "\r%u reads|total hits %llu\n", qe - qb, nhit);
