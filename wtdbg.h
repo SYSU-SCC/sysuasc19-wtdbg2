@@ -1576,7 +1576,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			thread_beg_iter(mdbg);
 			mdbg->task = 1;
 			thread_end_iter(mdbg);
-			int single_batch_size = ncpu; // TODO: 暂时不支持其他的值
+			// int single_batch_size = ncpu; // TODO: 暂时不支持其他的值
+			int single_batch_size = 1; // TODO: 暂时不支持其他的值
 			int batch_size = single_batch_size * comm_sz; // NOTE: 32 * 1 32*2
 			int rstart = 0;
 			int rend = 0;
