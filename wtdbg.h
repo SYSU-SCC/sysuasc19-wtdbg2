@@ -1706,9 +1706,15 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 
 				temp_wyf_offset = 0;
 				for(wyf_i = 0; wyf_i < batch_size; wyf_i++){
-
+#ifdef DEBUG
+					// fprintf(stderr, "[debug rank %d] wyf_i : %d write result!!!!\n", my_rank, wyf_i);
+#endif
 					if (temp_wyf_offset >= sum_offset){break;}
 					temp_wyf_offset += decode_mdbg(wyf_global_buffer+temp_wyf_offset, &wyf_mdbg[wyf_i]);
+#ifdef DEBUG
+					// fprintf(stderr, "[debug rank %d] i : %d decode over!!!!\n", my_rank, wyf_i);
+					// fprintf(stderr, "[debug rank %d]  wyf_mdbg[%d].aux->hits->size : %u\n", my_rank, wyf_i, wyf_mdbg[wyf_i].aux->hits->size);
+#endif
 					KBMAux *aux = wyf_mdbg[wyf_i].aux;
 					// if(g->corr_mode && mdbg->cc->cns->size){
 					// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
