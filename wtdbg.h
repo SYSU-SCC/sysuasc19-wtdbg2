@@ -1685,7 +1685,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					fprintf(stderr, "[debug rank %d] wyf_global_buffer[%d] : %d\n", my_rank, i, wyf_global_buffer[i]);
 				}
 				fprintf(stderr, "[debug rank %d] mpi_allgatherv!!!\n", my_rank);
-				exit(0);
+				// exit(0);
 #endif
 
 
@@ -1697,8 +1697,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 #ifdef DEBUG
 					// fprintf(stderr, "[debug rank %d] wyf_i : %d write result!!!!\n", my_rank, wyf_i);
 #endif
-					if (temp_wyf_offset >= wyf_offset){break;}
-					temp_wyf_offset += decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[wyf_i]);
+					if (temp_wyf_offset >= sum_offset){break;}
+					temp_wyf_offset += decode_mdbg(wyf_global_buffer+temp_wyf_offset, &wyf_mdbg[wyf_i]);
 #ifdef DEBUG
 					// fprintf(stderr, "[debug rank %d] i : %d decode over!!!!\n", my_rank, wyf_i);
 					fprintf(stderr, "[debug rank %d]  wyf_mdbg[%d].aux->hits->size : %u\n", my_rank, wyf_i, wyf_mdbg[wyf_i].aux->hits->size);
