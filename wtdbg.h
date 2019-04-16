@@ -1511,8 +1511,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	int comm_sz = 0, my_rank = 0;
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-	fprintf(stderr, "[debug] comm_sz : %d\n", comm_sz);
-	fprintf(stderr, "[debug] my_rank : %d\n", my_rank);
 	for(ii=0;ii<in;ii++){
 		ib = ie;
 		ie = ib + ic;
@@ -1572,6 +1570,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				}
 			}
 		}
+		fprintf(stderr, "[debug] comm_sz : %d\n", comm_sz);
+		fprintf(stderr, "[debug] my_rank : %d\n", my_rank);
 		{
 			thread_beg_iter(mdbg);
 			mdbg->task = 1;
@@ -1652,7 +1652,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 #ifdef DEBUG
 				fprintf(stderr, "[debug rank : %d] wake complete!\n", my_rank);
 
-
+#endif
 				// TODO: mpi部分，与另一个进程的buffer拼起来
 				// TODO: 先收集所有进程的wyf_buffer
 				// buffer里的实际上是上一次的结果。
@@ -1706,7 +1706,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 
 
 				temp_wyf_offset = 0;
-#endif
 				for(wyf_i = 0; wyf_i < batch_size; wyf_i++){
 #ifdef DEBUG
 					// fprintf(stderr, "[debug rank %d] wyf_i : %d write result!!!!\n", my_rank, wyf_i);
