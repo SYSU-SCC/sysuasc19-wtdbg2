@@ -1389,7 +1389,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 		fprintf(stderr, "MPI do not Support Multiple thread\n");
 		exit(0);
 	}
-
 	kbm_map_t *hit;
 	kbm_read_t *pb;
 	BitVec *rdflags;
@@ -1634,15 +1633,15 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 									}
 
 									// TODO::缺了一点东西，要把kbm指针指回g的就行了，还有个string，忘了，不过不影响结果，先省略
-#define HCH_TIMER
+#ifdef HCH_TIMER
 									lt_timer_start(4, 0);
 #endif
 									// if(alno && rank == 0){ // 只要第一个进程写就好
 									// 	beg_bufferedwriter(bw);
-									// 	if(g->corr_mode && mdbg->cc->cns->size){ // maybe bug
-									// 		fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-									// 		println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
-									// 	}
+									// 	// if(g->corr_mode && mdbg->cc->cns->size){
+									// 	// 	fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
+									// 	// 	println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+									// 	// }
 									// 	for(i=0;i<aux->hits->size;i++){
 									// 		hit = ref_kbmmapv(aux->hits, i);
 									// 		fprint_hit_kbm(aux, i, bw->out);
@@ -1725,7 +1724,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	free(sv);
 	free(displs);
 	lt_timer_finalize();
-	if(rank !=0){
+	if(rank!=0){
 		exit(0);
 	}
 	return nhit;
