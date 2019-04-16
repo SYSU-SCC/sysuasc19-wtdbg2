@@ -90,7 +90,7 @@ static inline BitsVec* init_bitsvec(uint64_t size, uint32_t n_bit){
 static inline uint64_t getSize_bitsvec(BitsVec* src){
 	uint64_t offset=0;
 	offset+=sizeof(BitsVec);
-	offset+=(src->size * src->n_bit + 15) / 8;
+	offset+=(src->cap * src->n_bit + 15) / 8;
 	// printf("bitsvec: %llu, size: %llu ,cap: %llu \n", offset, src->size,src->cap);
 	return offset;
 }
@@ -100,7 +100,7 @@ static inline uint64_t encode_bitsvec(BitsVec* src, char* dest){
 	memcpy(dest+offset,src, sizeof(BitsVec));
 	offset+=sizeof(BitsVec);
 	memcpy(dest+offset,src->bits, (src->size * src->n_bit + 15) / 8*sizeof(uint8_t));
-	offset+=(src->size * src->n_bit + 15) / 8;
+	offset+=(src->cap * src->n_bit + 15) / 8;
 	return offset;
 }
 

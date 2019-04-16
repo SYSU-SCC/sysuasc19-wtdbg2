@@ -1,3 +1,23 @@
+{ 
+    "name": "ac",
+    "host": "172.16.20.241",
+    "protocol": "sftp",
+    "port": 22,
+    "username": "asc19",
+    "remotePath": "/nfs_public/asc19/liangt/wtdbg2-test/mpidebug/wtdbg2",
+    "password": "sysuasc19",
+    "uploadOnSave": true
+}
+{
+    "name": "cpn",
+    "host": "172.16.20.1",
+    "protocol": "sftp",
+    "port": 22,
+    "username": "nsccgz_yfdu_16",
+    "remotePath": "/GPUFS/nsccgz_yfdu_16/liangt/wtdbg-code/wtdbg-mpi",
+    "privateKeyPath": "C:\\Users\\lt\\Documents\\Tencent Files\\1076745852\\FileRecv\\nsccgz_yfdu_16.id",
+    "uploadOnSave": true
+}
 ## <a name="update"></a>Updates
 * wtdbg 2.3 2018-12-23<br>
 No limitation on read length and read count.
