@@ -1696,11 +1696,11 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					// 	}
 					// }
 					
-					free(wyf_mdbg[0].aux->hits->buffer);
-					free(wyf_mdbg[0].aux->hits);
-					free(wyf_mdbg[0].aux->cigars->bits);
-					free(wyf_mdbg[0].aux->cigars);
-					free(wyf_mdbg[0].aux);
+					free(wyf_mdbg[i].aux->hits->buffer);
+					free(wyf_mdbg[i].aux->hits);
+					free(wyf_mdbg[i].aux->cigars->bits);
+					free(wyf_mdbg[i].aux->cigars);
+					free(wyf_mdbg[i].aux);
 				}
 			}
 			free(wyf_counts);
