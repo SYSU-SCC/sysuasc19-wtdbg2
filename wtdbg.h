@@ -1682,6 +1682,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					if(g->chainning_hits){
 						chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 					}
+#ifdef DEBUG
+					fprintf(stderr, "[debug rank %d] i : %d: one_bitvec and chainning_hits_core!!!!\n", my_rank, i);
+#endif
 					for(i=0;i<aux->hits->size;i++){
 						hit = ref_kbmmapv(aux->hits, i);
 						if(hit->mat == 0) continue;
@@ -1706,7 +1709,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
 					// 	}
 					// }
-					
+#ifdef DEBUG
+					fprintf(stderr, "[debug rank %d] i : %d: map2rdhits_graph!!!!\n", my_rank, i);
+#endif
 					free(wyf_mdbg[i].aux->hits->buffer);
 					free(wyf_mdbg[i].aux->hits);
 					free(wyf_mdbg[i].aux->cigars->bits);
