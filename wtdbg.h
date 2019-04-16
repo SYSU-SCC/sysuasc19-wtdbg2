@@ -669,6 +669,52 @@ FILE *alno;
 int task;
 thread_end_def(mdbg);
 
+
+
+static uint64_t encode_aux(KBMAux * ori, char * buffer){
+	// fprintf(stderr, "[debug] encode_aux\n");
+	uint64_t offset = 0;
+	memcpy(buffer, ori, sizeof(KBMAux));
+	offset += sizeof(KBMAux);
+	offset += encode_kbmmapv(ori->hits, buffer+offset);
+	offset += encode_bitsvec(ori->cigars, buffer+offset);
+	return offset;
+}
+
+static uint64_t decode_aux(char * buffer, KBMAux * dest){
+	uint64_t offset = 0;
+	memcpy(dest, buffer, sizeof(KBMAux));
+	offset += sizeof(KBMAux);
+	dest->hits = (kbmmapv*)malloc(sizeof(kbmmapv));
+	offset += decode_kbmmapv(buffer+offset, dest->hits);
+	dest->cigars = calloc(1, sizeof(BitsVec));
+	offset += decode_bitsvec(buffer+offset, dest->cigars);
+	return offset;
+}
+
+static uint64_t encode_mdbg(struct mdbg_struct * ori, char * buffer){
+	// fprintf(stderr, "[debug] encode_mdbg\n");
+	// 将ori里面的数据， 填到buffer中，并且返回偏移量
+	uint64_t offset=0;
+	memcpy(buffer, ori, sizeof(struct mdbg_struct));
+	offset += sizeof(struct mdbg_struct);
+	// ori->reg 已经复制好了
+	offset += encode_aux(ori->aux, buffer+offset);
+	return offset;
+}
+
+static uint64_t decode_mdbg(char * buffer, struct mdbg_struct * dest){
+	// 将buffer里面的一个单位，转成一个mdbg结构体，malloc相关空间，并且返回一个offset偏移量
+	uint64_t offset=0;
+	memcpy(dest, buffer, sizeof(struct mdbg_struct));
+	offset += sizeof(struct mdbg_struct);
+	// dest->reg 已经复制好了
+	dest->aux = (KBMAux *)malloc(sizeof(KBMAux));
+	offset += decode_aux(buffer+offset, dest->aux);
+	return offset;
+}
+
+
 thread_beg_func(mdbg);
 Graph *g;
 KBM *kbm;
@@ -1545,6 +1591,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			int * wyf_displs = (int *)malloc(sizeof(int)*comm_sz);
 			int * wyf_counts = (int *)malloc(sizeof(int)*comm_sz);
 			int i = 0;
+
+			wyf_offset = 0;
+			temp_wyf_offset = 0;
 			for(rid=qb;rid<qe;rid++){
 				if(rid < qe){
 					if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
@@ -1558,6 +1607,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				}
 				while (mdbg->state);
 				if(mdbg->reg.closed == 0){
+					temp_wyf_offset = wyf_offset;
+					wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
+					decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[0]);
 					KBMAux *aux = mdbg->aux;
 					if(g->corr_mode && mdbg->cc->cns->size){
 						g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
@@ -1619,6 +1671,11 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						}
 					}
 					mdbg->reg.closed = 1;
+					free(wyf_mdbg[0].aux->hits->buffer);
+					free(wyf_mdbg[0].aux->hits);
+					free(wyf_mdbg[0].aux->cigars->bits);
+					free(wyf_mdbg[0].aux->cigars);
+					free(wyf_mdbg[0].aux);
 				}
 			}
 			free(wyf_counts);

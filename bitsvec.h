@@ -87,6 +87,35 @@ static inline BitsVec* init_bitsvec(uint64_t size, uint32_t n_bit){
 	return vec;
 }
 
+
+static inline uint64_t getSize_bitsvec(BitsVec* src){
+	uint64_t offset=0;
+	offset+=sizeof(BitsVec);
+	offset+=(src->size * src->n_bit + 15) / 8*sizeof(uint8_t);
+	// printf("bitsvec: %llu, size: %llu ,cap: %llu \n", offset, src->size,src->cap);
+	return offset;
+}
+
+static inline uint64_t encode_bitsvec(BitsVec* src, char* dest){
+	uint64_t offset=0;
+	memcpy(dest+offset,src, sizeof(BitsVec));
+	offset+=sizeof(BitsVec);
+	memcpy(dest+offset,src->bits, (src->size * src->n_bit + 15) / 8*sizeof(uint8_t));
+	offset+=(src->size * src->n_bit + 15) / 8*sizeof(uint8_t);
+	return offset;
+}
+
+static inline uint64_t decode_bitsvec(char* src, BitsVec* dest){
+	uint64_t offset=0;
+	memcpy(dest, src+offset, sizeof(BitsVec));
+	offset+=sizeof(BitsVec);
+	dest->bits  = calloc((dest->cap * dest->n_bit + 15) / 8, 1);
+	// printf("size: %lld\n",(dest->size * dest->n_bit + 15) / 8*sizeof(uint8_t));
+	memcpy(dest->bits, src+offset, (dest->size * dest->n_bit + 15) / 8*sizeof(uint8_t));
+	offset+=(dest->size * dest->n_bit + 15) / 8*sizeof(uint8_t);
+	return offset;
+}
+
 static inline size_t bitsvec_obj_desc_cnt(void *obj, int idx){
 	return (((BitsVec*)obj)->cap * ((BitsVec*)obj)->n_bit + 15) / 8;
 	idx = idx;
