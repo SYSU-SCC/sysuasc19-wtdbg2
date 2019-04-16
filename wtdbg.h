@@ -1576,7 +1576,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			thread_beg_iter(mdbg);
 			mdbg->task = 1;
 			thread_end_iter(mdbg);
-			int single_batch_size = ncpu; // TODO: 暂时不支持其他的值
+			int single_batch_size = 1; // TODO: 暂时不支持其他的值
 			int batch_size = single_batch_size * comm_sz; // NOTE: 32 * 1 32*2
 			int rstart = 0;
 			int rend = 0;
@@ -1592,31 +1592,56 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			int * wyf_counts = (int *)malloc(sizeof(int)*comm_sz);
 			int i = 0;
 
-			wyf_offset = 0;
-			temp_wyf_offset = 0;
-			for(rid=qb;rid<qe;rid++){
-				if(rid < qe){
-					if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
-					thread_wait_one(mdbg);
+			// 额外增加一次循环，为了将目前还没写结果的线程的结果整理好
+			for (batch_i = 0; batch_i < loop_size+1; batch_i++){
+				// 当前进程检测自己是否有数据需要算。
+				wyf_offset = 0;
+				temp_wyf_offset = 0;
+				int rstart = batch_i * batch_size + my_rank * single_batch_size;
+				if (rstart >= qe){
+					// TODO: 这个进程不需要算
+					rstart = -1;
+					rend = -1;
 				}
+				else {
+					rend = fmin(rstart + single_batch_size, qe);
+				}
+				// NOTE: 注意到，rstart，rend是左闭右开区间
+				// 0-31  32-63
+#ifdef DEBUG
+				fprintf(stderr, "[debug rank : %d] rstart : %d\n", my_rank, rstart);
+				fprintf(stderr, "[debug rank : %d] rend : %d\n", my_rank, rend);
+#endif
+				// 这个循环直接唤起一批任务，encode的是上一批的结果
+				// for (rid = rstart; rid < rend+ncpu; rid++){
+				for (rid = rstart; rid < rend; rid++){
+					if(rid < rend){
+						if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
+						thread_wait_one(mdbg);
+					}
 
-				if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
-					pb = ref_kbmreadv(g->kbm->reads, rid);
-					mdbg->reg = (reg_t){0, rid, 0, 0, pb->bincnt, 0, 0};
-					thread_wake(mdbg);
+					if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
+						pb = ref_kbmreadv(g->kbm->reads, rid);
+						mdbg->reg = (reg_t){0, rid, 0, 0, pb->bincnt, 0, 0};
+						thread_wake(mdbg);
+					}
+					while (mdbg->state);
+					if(mdbg->reg.closed == 0){
+						wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
+						mdbg->reg.closed = 1;
+					}
 				}
-				while (mdbg->state);
-				if(mdbg->reg.closed == 0){
-					temp_wyf_offset = wyf_offset;
-					wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
-					decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[0]);
-					KBMAux *aux = wyf_mdbg[0].aux;
+				temp_wyf_offset = 0;
+				for(i = 0; i < batch_size; i++){
+					decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[i]);
+					KBMAux *aux = wyf_mdbg[i].aux;
 					// if(g->corr_mode && mdbg->cc->cns->size){
 					// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 					// }
-#ifdef HCH_TIMER
+	#ifdef HCH_TIMER
 					lt_timer_start(4, 0);
-#endif
+	#endif
+					// TODO: 这个可能要补一下
 					// if(alno){
 					// 	beg_bufferedwriter(bw);
 					// 	if(g->corr_mode && mdbg->cc->cns->size){
@@ -1629,9 +1654,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					// 	}
 					// 	end_bufferedwriter(bw);
 					// }
-#ifdef HCH_TIMER
+	#ifdef HCH_TIMER
 					lt_timer_stop(4, 0);
-#endif
+	#endif
 					for(i=0;i< aux->hits->size;i++){
 						hit = ref_kbmmapv( aux->hits, i);
 						if(hit->mat == 0) continue;
@@ -1670,7 +1695,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
 					// 	}
 					// }
-					mdbg->reg.closed = 1;
+					
 					free(wyf_mdbg[0].aux->hits->buffer);
 					free(wyf_mdbg[0].aux->hits);
 					free(wyf_mdbg[0].aux->cigars->bits);
