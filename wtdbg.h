@@ -1712,8 +1712,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 #ifdef DEBUG
 					fprintf(stderr, "[debug rank %d] i : %d: map2rdhits_graph!!!!\n", my_rank, i);
 #endif
-					free(wyf_mdbg[i].aux->hits->buffer);
-					free(wyf_mdbg[i].aux->hits);
+					free_kbmmapv(wyf_mdbg[i].aux->hits);
 #ifdef DEBUG
 					fprintf(stderr, "[debug rank %d] i : %d: free(wyf_mdbg[i].aux->hits);!!!!\n", my_rank, i);
 #endif
