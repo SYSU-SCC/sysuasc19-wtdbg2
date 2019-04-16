@@ -1546,10 +1546,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			// 唤起一批任务一,没用wait，主要是计算线程工作
 				totalsize_send = sizeof(int); // 线程的偏置数组的位置
 				int cur_index=0;
-				// rid += ncpu*rank;
-				// got_size=ncpu*rank;
-				int rend = rid<qe?rid+ncpu:qe+ncpu;
-				for(;rid<=rend;rid++){
+				rid += ncpu*rank;
+				int rend = rid+ncpu;
+				for(;rid<rend;rid++){
 					if(rid < qe){
 						if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
 						thread_wait_one(mdbg);
@@ -1579,83 +1578,113 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						mdbg->task = 0; // TODO:: 把没有任务的顺延，不要空载
 					}
 				}
+				rid += ncpu*(nsize- rank - 1);
 				memcpy(LT_MPI_send_buffer, &cur_index, sizeof(int));
 
-				
-				cur_index=sizeof(int);
-				// char* cur_buffer=LT_MPI_recv_buffer + displs[j];
-				char* cur_buffer=LT_MPI_send_buffer;
-				int aux_size=0; 
-				memcpy(&aux_size,cur_buffer, sizeof(int));
-				// printf("\n!: %d\n",aux_size);
-				// //假定现在的就是每个进程都开相同数目的线程,会有一些没用的字段，但是不多，暂时不管
-				int aux_itr=0;
-				for(aux_itr=0;aux_itr<aux_size;aux_itr++){
-					KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
-					cur_index +=decode_aux(cur_buffer+ cur_index, aux);
-					// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略 // 跟close一样，似乎没什么的
-					if(aux->lt_closed == 0 && (rdflags == NULL || get_bitvec(rdflags, aux->lt_rid) == 0))
+				// 如果有，则整理结果，都是主线程工作
+				if(lt_firstflag != 0)
+				{
+					// 收集数据到recv buffer里面,需要send buffer。没有线程wait 进程同步， 通信操作
 					{
-						// if(g->corr_mode && mdbg->cc->cns->size){
-						// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
-						// }
-
-						// TODO::缺了一点东西，要把kbm指针指回g的就行了，还有个string，忘了，不过不影响结果，先省略
-						// lt_timer_start(4, 0);
-						// if(alno && rank == 0){ // 只要第一个进程写就好
-						// 	beg_bufferedwriter(bw);
-						// 	// if(g->corr_mode && mdbg->cc->cns->size){
-						// 	// 	fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-						// 	// 	println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
-						// 	// }
-						// 	for(i=0;i<aux->hits->size;i++){
-						// 		hit = ref_kbmmapv(aux->hits, i);
-						// 		fprint_hit_kbm(aux, i, bw->out);
-						// 	}
-						// 	end_bufferedwriter(bw);
-						// }
-						// lt_timer_stop(4, 0);
-
-						for(i=0;i<aux->hits->size;i++){
-							hit = ref_kbmmapv(aux->hits, i);
-							if(hit->mat == 0) continue;
-							if(rdflags
-								&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
-								&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
-								&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
-								){
-								one_bitvec(rdflags, hit->tidx);
-							}
-						}
-						if(g->chainning_hits){
-							chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
-						}
+						// 获得每个进程buffer的大小
+						MPI_Allgather(&totalsize_send, 1, MPI_INT, 
+								sv, 1, MPI_INT, MPI_COMM_WORLD);
 						
-						for(i=0;i<aux->hits->size;i++){
-							hit = ref_kbmmapv(aux->hits, i);
-							if(hit->mat == 0) continue;
-							nhit ++;
-							append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
-							hit->cgoff = g->cigars->size - hit->cglen;
-							if(raw){
-								// hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
-							} else {
-								map2rdhits_graph(g, hit);
-							}
+						// MPI_Barrier(MPI_COMM_WORLD); // 好像不需要，
+						u4i totalsize_recv=0;
+						int c1=0;
+						for(c1=0;c1<nsize;c1++){
+							displs[c1] = totalsize_recv;
+							totalsize_recv+=sv[c1];
 						}
-						// if(KBM_LOG){
-						// 	fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
-						// 	for(i=0;i<mdbg->aux->hits->size;i++){
-						// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
-						// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
-						// 	}
-						// }
+						// LT_MPI_recv_buffer = (char*) malloc(totalsize_recv*sizeof(char));
+						MPI_Allgatherv(LT_MPI_send_buffer, totalsize_send, MPI_CHAR,
+								LT_MPI_recv_buffer, sv, displs, MPI_CHAR, MPI_COMM_WORLD);
 
-						// lt_free_aux(aux);
-						free_bitsvec(aux->cigars);
-						free_kbmmapv(aux->hits);
-						free(aux);
+						// free(LT_MPI_send_buffer);
 					}
+
+					// 整理结果，需要recv buffer
+					{
+						for(j=0;j<nsize;j++){
+							// // 通过displs获得当前进程的结果
+							uint64_t cur_index=sizeof(int);
+							char* cur_buffer=LT_MPI_recv_buffer + displs[j];
+							int aux_size=0; 
+							memcpy(&aux_size,cur_buffer, sizeof(int));
+							// printf("\n!: %d\n",aux_size);
+							// //假定现在的就是每个进程都开相同数目的线程,会有一些没用的字段，但是不多，暂时不管
+							int aux_itr=0;
+							for(aux_itr=0;aux_itr<aux_size;aux_itr++){
+								KBMAux *aux = (KBMAux*)malloc(sizeof(KBMAux));
+								cur_index +=decode_aux(cur_buffer+ cur_index, aux);
+								// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略 // 跟close一样，似乎没什么的
+								if(aux->lt_closed == 0 && (rdflags == NULL || get_bitvec(rdflags, aux->lt_rid) == 0)){
+									// if(g->corr_mode && mdbg->cc->cns->size){
+									// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
+									// }
+
+									// TODO::缺了一点东西，要把kbm指针指回g的就行了，还有个string，忘了，不过不影响结果，先省略
+									// lt_timer_start(4, 0);
+									// if(alno && rank == 0){ // 只要第一个进程写就好
+									// 	beg_bufferedwriter(bw);
+									// 	// if(g->corr_mode && mdbg->cc->cns->size){
+									// 	// 	fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
+									// 	// 	println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+									// 	// }
+									// 	for(i=0;i<aux->hits->size;i++){
+									// 		hit = ref_kbmmapv(aux->hits, i);
+									// 		fprint_hit_kbm(aux, i, bw->out);
+									// 	}
+									// 	end_bufferedwriter(bw);
+									// }
+									// lt_timer_stop(4, 0);
+
+									for(i=0;i<aux->hits->size;i++){
+										hit = ref_kbmmapv(aux->hits, i);
+										if(hit->mat == 0) continue;
+										if(rdflags
+											&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
+											&& (hit->tb <= 1 && hit->te + 1 >= (int)(g->kbm->reads->buffer[hit->tidx].bincnt))
+											&& (hit->qb > 1 || hit->qe + 1 < (int)(g->kbm->reads->buffer[hit->qidx].bincnt))
+											){
+											one_bitvec(rdflags, hit->tidx);
+										}
+									}
+									if(g->chainning_hits){
+										chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
+									}
+									
+									for(i=0;i<aux->hits->size;i++){
+										hit = ref_kbmmapv(aux->hits, i);
+										if(hit->mat == 0) continue;
+										nhit ++;
+										append_bitsvec(g->cigars, aux->cigars, hit->cgoff, hit->cglen);
+										hit->cgoff = g->cigars->size - hit->cglen;
+										if(raw){
+											// hit2rdregs_graph(g, regs, g->corr_mode? mdbg->cc->cns->size / KBM_BIN_SIZE : 0, hit, mdbg->aux->cigars, maps);
+										} else {
+											map2rdhits_graph(g, hit);
+										}
+									}
+									// if(KBM_LOG){
+									// 	fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
+									// 	for(i=0;i<mdbg->aux->hits->size;i++){
+									// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
+									// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
+									// 	}
+									// }
+
+									// lt_free_aux(aux);
+									free_bitsvec(aux->cigars);
+									free_kbmmapv(aux->hits);
+									free(aux);
+								}//end a thread's result
+							} // end process a processer's work
+						}
+					}
+				}else{
+					lt_firstflag=1;
 				}
 			}
 		}
