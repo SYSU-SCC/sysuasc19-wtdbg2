@@ -1610,30 +1610,30 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					temp_wyf_offset = wyf_offset;
 					wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
 					decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[0]);
-					KBMAux *aux = mdbg->aux;
-					if(g->corr_mode && mdbg->cc->cns->size){
-						g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
-					}
+					KBMAux *aux = wyf_mdbg[0].aux;
+					// if(g->corr_mode && mdbg->cc->cns->size){
+					// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
+					// }
 #ifdef HCH_TIMER
 					lt_timer_start(4, 0);
 #endif
-					if(alno){
-						beg_bufferedwriter(bw);
-						if(g->corr_mode && mdbg->cc->cns->size){
-							fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-							println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
-						}
-						for(i=0;i<mdbg->aux->hits->size;i++){
-							hit = ref_kbmmapv(mdbg->aux->hits, i);
-							fprint_hit_kbm(mdbg->aux, i, bw->out);
-						}
-						end_bufferedwriter(bw);
-					}
+					// if(alno){
+					// 	beg_bufferedwriter(bw);
+					// 	if(g->corr_mode && mdbg->cc->cns->size){
+					// 		fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
+					// 		println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+					// 	}
+					// 	for(i=0;i<mdbg->aux->hits->size;i++){
+					// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
+					// 		fprint_hit_kbm(mdbg->aux, i, bw->out);
+					// 	}
+					// 	end_bufferedwriter(bw);
+					// }
 #ifdef HCH_TIMER
 					lt_timer_stop(4, 0);
 #endif
-					for(i=0;i<mdbg->aux->hits->size;i++){
-						hit = ref_kbmmapv(mdbg->aux->hits, i);
+					for(i=0;i< aux->hits->size;i++){
+						hit = ref_kbmmapv( aux->hits, i);
 						if(hit->mat == 0) continue;
 						if(rdflags
 							&& g->kbm->reads->buffer[hit->tidx].bincnt < g->kbm->reads->buffer[hit->qidx].bincnt
@@ -1663,13 +1663,13 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 							map2rdhits_graph(g, hit);
 						}
 					}
-					if(KBM_LOG){
-						fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
-						for(i=0;i<mdbg->aux->hits->size;i++){
-							hit = ref_kbmmapv(mdbg->aux->hits, i);
-								fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
-						}
-					}
+					// if(KBM_LOG){
+					// 	fprintf(KBM_LOGF, "QUERY: %s\t+\t%d\t%d\n", g->kbm->reads->buffer[mdbg->reg.rid].tag, mdbg->reg.beg, mdbg->reg.end);
+					// 	for(i=0;i<mdbg->aux->hits->size;i++){
+					// 		hit = ref_kbmmapv(mdbg->aux->hits, i);
+					// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
+					// 	}
+					// }
 					mdbg->reg.closed = 1;
 					free(wyf_mdbg[0].aux->hits->buffer);
 					free(wyf_mdbg[0].aux->hits);
