@@ -1530,6 +1530,20 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			thread_beg_iter(mdbg);
 			mdbg->task = 1;
 			thread_end_iter(mdbg);
+			int single_batch_size = ncpu; // TODO: 暂时不支持其他的值
+			int batch_size = single_batch_size * comm_sz; // NOTE: 32 * 1 32*2
+			int rstart = 0;
+			int rend = 0;
+			int loop_size = (qe + batch_size)/batch_size;
+			int batch_i = 0;
+			uint64_t wyf_offset = 0;
+			uint64_t temp_wyf_offset = 0;
+			struct mdbg_struct * wyf_mdbg = (struct mdbg_struct *)malloc(sizeof(struct mdbg_struct)*batch_size);
+			char * wyf_buffer = (char *)malloc(1024*1024*1024);
+			char * wyf_global_buffer = (char *)malloc(1024*1024*1024+1024*1024*1023);
+			uint64_t * wyf_offsets = (uint64_t *)malloc(sizeof(uint64_t)*comm_sz);
+			int * wyf_displs = (int *)malloc(sizeof(int)*comm_sz);
+			int * wyf_counts = (int *)malloc(sizeof(int)*comm_sz);
 			int i = 0;
 			for(rid=qb;rid<qe;rid++){
 				if(rid < qe){
@@ -1607,6 +1621,12 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					mdbg->reg.closed = 1;
 				}
 			}
+			free(wyf_counts);
+			free(wyf_displs);
+			free(wyf_offsets);
+			free(wyf_global_buffer);
+			free(wyf_buffer);
+			free(wyf_mdbg);
 			for (i = 0; i < ncpu; i++){
 				thread_wait_next(mdbg);
 				pb = NULL;
