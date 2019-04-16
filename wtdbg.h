@@ -1613,26 +1613,40 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				fprintf(stderr, "[debug rank : %d] rstart : %d\n", my_rank, rstart);
 				fprintf(stderr, "[debug rank : %d] rend : %d\n", my_rank, rend);
 #endif
-				// 这个循环直接唤起一批任务，encode的是上一批的结果
-				// for (rid = rstart; rid < rend+ncpu; rid++){
-				for (rid = rstart; rid < rend; rid++){
-					if(rid < rend){
-						if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
-						thread_wait_one(mdbg);
-					}
 
-					if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
-						pb = ref_kbmreadv(g->kbm->reads, rid);
-						mdbg->reg = (reg_t){0, rid, 0, 0, pb->bincnt, 0, 0};
-						thread_wake(mdbg);
+				if (batch_i == loop_size){
+					// 这是最后一次循环了，已经没有新的计算需要唤起
+					for (i = 0; i < ncpu; i++){
+						thread_wait_next(mdbg);
+						pb = NULL;
+						if(mdbg->reg.closed == 0){
+							wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
+							mdbg->reg.closed = 1;
+						}
 					}
-					while (mdbg->state);
-					if(mdbg->reg.closed == 0){
-#ifdef DEBUG
-					// fprintf(stderr, "[debug rank %d]  mdbg->aux->hits->size : %u\n", my_rank,  mdbg->aux->hits->size);
-#endif
-						wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
-						mdbg->reg.closed = 1;
+				}
+				else{
+					// 这个循环直接唤起一批任务，encode的是上一批的结果
+					// for (rid = rstart; rid < rend+ncpu; rid++){
+					for (rid = rstart; rid < rend; rid++){
+						if(rid < rend){
+							if(!KBM_LOG && ((rid - qb) % 2000) == 0){ fprintf(KBM_LOGF, "\r%u|%llu", rid - qb, nhit); fflush(KBM_LOGF); }
+							thread_wait_one(mdbg);
+						}
+
+						if(rid < qe && (rdflags == NULL || get_bitvec(rdflags, rid) == 0)){
+							pb = ref_kbmreadv(g->kbm->reads, rid);
+							mdbg->reg = (reg_t){0, rid, 0, 0, pb->bincnt, 0, 0};
+							thread_wake(mdbg);
+						}
+						while (mdbg->state);
+						if(mdbg->reg.closed == 0){
+	#ifdef DEBUG
+						// fprintf(stderr, "[debug rank %d]  mdbg->aux->hits->size : %u\n", my_rank,  mdbg->aux->hits->size);
+	#endif
+							wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
+							mdbg->reg.closed = 1;
+						}
 					}
 				}
 #ifdef DEBUG
