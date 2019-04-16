@@ -354,6 +354,7 @@ static inline int64_t mm_parse_num(const char *str)
 }
 
 int main(int argc, char **argv){
+	MPI_init(0,NULL);
 #ifdef HCH_TIMER
 	lt_timer_init();
 	lt_timer_start(0, 0);

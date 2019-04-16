@@ -26,6 +26,8 @@
 #include "pgzf.h"
 #include <getopt.h>
 #include <regex.h>
+#include <mpi.h>
+#include <math.h>
 
 #define WT_MAX_RD			0x3FFFFFFF // 1 G
 #define WT_MAX_RDLEN		0x00FFFFFF // 16 Mb
@@ -1460,6 +1462,11 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	}
 	//fix_node = 0;
 	nhit = 0;
+	int comm_sz = 0, my_rank = 0;
+	MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
+	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+	fprintf(stderr, "[debug] comm_sz : %d\n", comm_sz);
+	fprintf(stderr, "[debug] my_rank : %d\n", my_rank);
 	for(ii=0;ii<in;ii++){
 		ib = ie;
 		ie = ib + ic;
@@ -1625,6 +1632,10 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	if(bw) close_bufferedwriter(bw);
 	if(alno) fclose(alno);
 	if(rdflags) free_bitvec(rdflags);
+	MPI_Finalize();
+	if (my_rank != 0){
+		exit(0);
+	}
 	return nhit;
 }
 
