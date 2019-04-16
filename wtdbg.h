@@ -1661,7 +1661,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 								wyf_offsets, 1, MPI_UINT64_T, MPI_COMM_WORLD);
 #ifdef DEBUG
 				for (i = 0; i < comm_sz; i++){
-					fprintf(stderr, "[debug rank %d] wyf_offsets[%d] : %llu\n", my_rank, i, wyf_offsets[i]);
+					fprintf(stderr, "[debug rank %d] wyf_offsets[%llu] : %llu\n", my_rank, i, wyf_offsets[i]);
 				}
 #endif
 				wyf_displs[0] = 0;
@@ -1679,10 +1679,10 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 #ifdef DEBUG
 				fprintf(stderr, "[debug rank %d] sum_offset : %llu\n", my_rank,sum_offset);
 				for (i = 0; i < comm_sz; i++){
-					fprintf(stderr, "[debug rank %d] wyf_displs[%d] : %d\n", my_rank, i, wyf_displs[i]);
+					fprintf(stderr, "[debug rank %d] wyf_displs[%llu] : %d\n", my_rank, i, wyf_displs[i]);
 				}
 				for (i = 0; i < comm_sz; i++){
-					fprintf(stderr, "[debug rank %d] wyf_counts[%d] : %d\n", my_rank, i, wyf_counts[i]);
+					fprintf(stderr, "[debug rank %d] wyf_counts[%llu] : %d\n", my_rank, i, wyf_counts[i]);
 				}
 #endif
 				MPI_Allgatherv(
@@ -1697,7 +1697,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				);
 #ifdef DEBUG
 				for (i = 0; i < comm_sz; i++){
-					fprintf(stderr, "[debug rank %d] wyf_global_buffer[%d] : %d\n", my_rank, i, wyf_global_buffer[i]);
+					fprintf(stderr, "[debug rank %d] wyf_global_buffer[%llu] : %d\n", my_rank, i, wyf_global_buffer[i]);
 				}
 				fprintf(stderr, "[debug rank %d] mpi_allgatherv!!!\n", my_rank);
 				// exit(0);
