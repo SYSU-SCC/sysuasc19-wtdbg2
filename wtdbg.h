@@ -1576,7 +1576,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			thread_beg_iter(mdbg);
 			mdbg->task = 1;
 			thread_end_iter(mdbg);
-			int single_batch_size = 1; // TODO: 暂时不支持其他的值
+			int single_batch_size = ncpu; // TODO: 暂时不支持其他的值
 			int batch_size = single_batch_size * comm_sz; // NOTE: 32 * 1 32*2
 			int rstart = 0;
 			int rend = 0;
@@ -1640,12 +1640,12 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 #endif
 				for(wyf_i = 0; wyf_i < batch_size; wyf_i++){
 #ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] wyf_i : %d write result!!!!\n", my_rank, wyf_i);
+					// fprintf(stderr, "[debug rank %d] wyf_i : %d write result!!!!\n", my_rank, wyf_i);
 #endif
 					if (temp_wyf_offset >= wyf_offset){break;}
 					temp_wyf_offset += decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[wyf_i]);
 #ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] i : %d decode over!!!!\n", my_rank, wyf_i);
+					// fprintf(stderr, "[debug rank %d] i : %d decode over!!!!\n", my_rank, wyf_i);
 					fprintf(stderr, "[debug rank %d]  wyf_mdbg[%d].aux->hits->size : %u\n", my_rank, wyf_i, wyf_mdbg[wyf_i].aux->hits->size);
 #endif
 					KBMAux *aux = wyf_mdbg[wyf_i].aux;
@@ -1685,9 +1685,6 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					if(g->chainning_hits){
 						chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 					}
-#ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] wyf_i : %d: one_bitvec and chainning_hits_core!!!!\n", my_rank, wyf_i);
-#endif
 					for(i=0;i<aux->hits->size;i++){
 						hit = ref_kbmmapv(aux->hits, i);
 						if(hit->mat == 0) continue;
@@ -1712,17 +1709,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					// 			fprintf(KBM_LOGF, "\t%s\t%c\t%d\t%d\t%d\t%d\t%d\n", g->kbm->reads->buffer[hit->tidx].tag, "+-"[hit->qdir], g->kbm->reads->buffer[hit->tidx].rdlen, hit->tb * KBM_BIN_SIZE, hit->te * KBM_BIN_SIZE, hit->aln * KBM_BIN_SIZE, hit->mat);
 					// 	}
 					// }
-#ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] wyf_i : %d: map2rdhits_graph!!!!\n", my_rank, wyf_i);
-#endif
 					free_kbmmapv(wyf_mdbg[wyf_i].aux->hits);
-#ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] wyf_i : %d: free(wyf_mdbg[i].aux->hits);!!!!\n", my_rank, wyf_i);
-#endif
 					free_bitsvec(wyf_mdbg[wyf_i].aux->cigars);
-#ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] wyf_i : %d: free(wyf_mdbg[i].aux->cigars);!!!!\n", my_rank, wyf_i);
-#endif
 					free(wyf_mdbg[wyf_i].aux);
 				}
 			}
