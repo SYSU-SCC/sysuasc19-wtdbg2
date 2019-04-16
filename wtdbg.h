@@ -1627,6 +1627,9 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					}
 					while (mdbg->state);
 					if(mdbg->reg.closed == 0){
+#ifdef DEBUG
+					fprintf(stderr, "[debug rank %d]  mdbg->aux->hits->size : %u\n", my_rank, i, mdbg->aux->hits->size);
+#endif
 						wyf_offset += encode_mdbg(mdbg, wyf_buffer+wyf_offset);
 						mdbg->reg.closed = 1;
 					}
