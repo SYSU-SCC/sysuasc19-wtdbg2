@@ -1381,6 +1381,15 @@ static inline u8i load_alignments_core(Graph *g, FileReader *pws, int raw, rdreg
 }
 
 static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs, u4v *maps[3], char *prefix, char *dump_kbm){
+	printf("init MPI: \n");
+	int provided;
+	MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+	if(provided != MPI_THREAD_MULTIPLE)
+	{
+		fprintf(stderr, "MPI do not Support Multiple thread\n");
+		exit(0);
+	}
+
 	kbm_map_t *hit;
 	kbm_read_t *pb;
 	BitVec *rdflags;
@@ -1620,26 +1629,29 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 								cur_index +=decode_aux(cur_buffer+ cur_index, aux);
 								// mdbg->task 不为1 要退出会好点。。因为那表示当前空载，但是这个解析的时候就不应该有加入，所以省略 // 跟close一样，似乎没什么的
 								if(aux->lt_closed == 0 && (rdflags == NULL || get_bitvec(rdflags, aux->lt_rid) == 0)){
-									// if(g->corr_mode && mdbg->cc->cns->size){
-									// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
-									// }
+									if(g->corr_mode && mdbg->cc->cns->size){
+										g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
+									}
 
 									// TODO::缺了一点东西，要把kbm指针指回g的就行了，还有个string，忘了，不过不影响结果，先省略
-									// lt_timer_start(4, 0);
+#define HCH_TIMER
+									lt_timer_start(4, 0);
+#endif
 									// if(alno && rank == 0){ // 只要第一个进程写就好
 									// 	beg_bufferedwriter(bw);
-									// 	// if(g->corr_mode && mdbg->cc->cns->size){
-									// 	// 	fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
-									// 	// 	println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
-									// 	// }
+									// 	if(g->corr_mode && mdbg->cc->cns->size){ // maybe bug
+									// 		fprintf(bw->out, "#corrected\t%s\t%u\t", mdbg->cc->tag->string, (u4i)mdbg->cc->cns->size);
+									// 		println_fwdseq_basebank(mdbg->cc->cns, 0, mdbg->cc->cns->size, bw->out);
+									// 	}
 									// 	for(i=0;i<aux->hits->size;i++){
 									// 		hit = ref_kbmmapv(aux->hits, i);
 									// 		fprint_hit_kbm(aux, i, bw->out);
 									// 	}
 									// 	end_bufferedwriter(bw);
 									// }
-									// lt_timer_stop(4, 0);
-
+#ifdef HCH_TIMER
+									lt_timer_stop(4, 0);
+#endif
 									for(i=0;i<aux->hits->size;i++){
 										hit = ref_kbmmapv(aux->hits, i);
 										if(hit->mat == 0) continue;
@@ -1712,6 +1724,10 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	free(LT_MPI_recv_buffer);
 	free(sv);
 	free(displs);
+	lt_timer_finalize();
+	if(rank !=0){
+		exit(0);
+	}
 	return nhit;
 }
 
