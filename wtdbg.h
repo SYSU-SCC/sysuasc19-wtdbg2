@@ -1592,6 +1592,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			int * wyf_displs = (int *)malloc(sizeof(int)*comm_sz);
 			int * wyf_counts = (int *)malloc(sizeof(int)*comm_sz);
 			int wyf_i = 0;
+			uint64_t sum_offset = 0;
 
 			// 额外增加一次循环，为了将目前还没写结果的线程的结果整理好
 			for (batch_i = 0; batch_i < loop_size+1; batch_i++){
@@ -1664,7 +1665,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				}
 #endif
 				wyf_displs[0] = 0;
-				uint64_t sum_offset = 0;
+				sum_offset = 0;
 				// 计算偏置
 				for (i = 1; i < comm_sz; i++){
 					sum_offset += wyf_offsets[i-1];
