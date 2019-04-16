@@ -4,7 +4,7 @@ RELEASE=20190312
 # CC  := gcc
 # CX := g++
 
-CC  := mpicc
+CC  := mpiicc
 CX := mpiicpc
 
 BIN := /usr/local/bin
