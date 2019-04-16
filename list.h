@@ -120,6 +120,40 @@ do {	\
 	\
 typedef struct { e_type* buffer; union { size_type size; size_type length; }; size_type cap; size_type off; u4i mem_zero:1, n_head:31; } list_type;	\
 	\
+	\
+static inline uint64_t getSize_##list_type(list_type* src){\
+	uint64_t offset=0;	\
+	offset += sizeof(list_type);  \
+	offset += (src->n_head+src->cap)*sizeof(e_type);  \
+	return offset; \
+}\
+	\
+static inline uint64_t encode_##list_type(list_type* src,char* dest){ \
+	uint64_t offset=0;	\
+	memcpy(dest,src, sizeof(list_type));	\
+	offset += sizeof(list_type);  \
+	memcpy(dest+offset,src->buffer-src->n_head, (src->n_head+src->size)*sizeof(e_type));	\
+	offset += (src->n_head+src->cap)*sizeof(e_type);  \
+	return offset; \
+}\
+\
+static inline uint64_t decode_##list_type(char* src,list_type* dest){ \
+	uint64_t offset=0;	\
+	memcpy(dest, src, sizeof(list_type));	\
+	offset += sizeof(list_type);  \
+	\
+	if(dest->n_head){	\
+		dest->buffer = (e_type*)calloc(dest->cap + dest->n_head, sizeof(e_type));	\
+		dest->buffer += dest->n_head;	\
+	} else {	\
+		dest->buffer = (e_type*)calloc(dest->cap, sizeof(e_type));	\
+	}	\
+	memcpy(dest->buffer - dest->n_head, src+offset, (dest->n_head+dest->size)*sizeof(e_type));	\
+	offset += (dest->n_head + dest->cap)*sizeof(e_type);  \
+	return offset; \
+}\
+	\
+	\
 static inline size_t list_type##_obj_desc_cnt(void *list, int idx){	\
 	if(idx == 0) return ((list_type*)list)->size * sizeof(e_type);	\
 	else return 0;	\

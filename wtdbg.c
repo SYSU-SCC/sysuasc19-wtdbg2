@@ -358,6 +358,15 @@ int main(int argc, char **argv){
 	lt_timer_init();
 	lt_timer_start(0, 0);
 #endif
+	printf("init MPI: \n");
+	int provided;
+	MPI_Init_thread(&argc, &argv, MPI_THREAD_MULTIPLE, &provided);
+	if(provided != MPI_THREAD_MULTIPLE)
+	{
+		fprintf(stderr, "MPI do not Support Multiple thread\n");
+		exit(0);
+	}
+
 	Graph *g;
 	KBMPar *par, *rpar;
 	KBM *kbm;
@@ -1122,6 +1131,7 @@ int main(int argc, char **argv){
 	free_graph(g);
 	fprintf(KBM_LOGF, "[%s] Program Done\n", date());
 	END_STAT_PROC_INFO(stderr);
+	lt_timer_finalize();
 #ifdef HCH_TIMER
 	lt_timer_stop(0,0);
 	lt_timer_finalize();
