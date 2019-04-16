@@ -1637,6 +1637,60 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				}
 #ifdef DEBUG
 				fprintf(stderr, "[debug rank : %d] wake complete!\n", my_rank);
+
+
+				// TODO: mpi部分，与另一个进程的buffer拼起来
+				// TODO: 先收集所有进程的wyf_buffer
+				// buffer里的实际上是上一次的结果。
+				MPI_Allgather(&wyf_offset, 1, MPI_UINT64_T,
+								wyf_offsets, 1, MPI_UINT64_T, MPI_COMM_WORLD);
+#ifdef DEBUG
+				for (i = 0; i < comm_sz; i++){
+					fprintf(stderr, "[debug rank %d] wyf_offsets[%d] : %llu\n", my_rank, i, wyf_offsets[i]);
+				}
+#endif
+				wyf_displs[0] = 0;
+				uint64_t sum_offset = 0;
+				// 计算偏置
+				for (i = 1; i < comm_sz; i++){
+					sum_offset += wyf_offsets[i-1];
+					wyf_displs[i] = sum_offset;
+				}
+				sum_offset = 0;
+				for (i = 0; i < comm_sz; i++){
+					wyf_counts[i] = wyf_offsets[i];
+					sum_offset += wyf_offsets[i];
+				}
+#ifdef DEBUG
+				fprintf(stderr, "[debug rank %d] sum_offset : %llu\n", my_rank,sum_offset);
+				for (i = 0; i < comm_sz; i++){
+					fprintf(stderr, "[debug rank %d] wyf_displs[%d] : %d\n", my_rank, i, wyf_displs[i]);
+				}
+				for (i = 0; i < comm_sz; i++){
+					fprintf(stderr, "[debug rank %d] wyf_counts[%d] : %d\n", my_rank, i, wyf_counts[i]);
+				}
+#endif
+				MPI_Allgatherv(
+					wyf_buffer,
+					wyf_offset,
+					MPI_CHAR,
+					wyf_global_buffer,
+					wyf_counts,
+					wyf_displs,
+					MPI_CHAR,
+					MPI_COMM_WORLD
+				);
+#ifdef DEBUG
+				for (i = 0; i < comm_sz; i++){
+					fprintf(stderr, "[debug rank %d] wyf_global_buffer[%d] : %d\n", my_rank, i, wyf_global_buffer[i]);
+				}
+				fprintf(stderr, "[debug rank %d] mpi_allgatherv!!!\n", my_rank);
+				exit(0);
+#endif
+
+
+
+
 				temp_wyf_offset = 0;
 #endif
 				for(wyf_i = 0; wyf_i < batch_size; wyf_i++){
