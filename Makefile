@@ -43,7 +43,7 @@ pgzf: mem_share.h hch_timer.c  hch_timer.h sort.h list.h thread.h pgzf.h pgzf.c
 	$(CC) $(CFLAGS) -o $@ pgzf.c hch_timer.c $(GLIBS)
 
 lt_sort.o:lt_sort.cpp
-	$(CX) $(CFLAGS) -c lt_sort.cpp -lm -lrt -lpthread -lz -std=c++11
+	$(CX) $(CFLAGS) -c lt_sort.cpp -lm -lrt -lpthread -lz -std=c++11 -static
 
 ltsort.a:lt_sort.o
 	ar -crv liblt_sort.a lt_sort.o
