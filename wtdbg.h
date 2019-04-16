@@ -1590,7 +1590,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 			uint64_t * wyf_offsets = (uint64_t *)malloc(sizeof(uint64_t)*comm_sz);
 			int * wyf_displs = (int *)malloc(sizeof(int)*comm_sz);
 			int * wyf_counts = (int *)malloc(sizeof(int)*comm_sz);
-			int i = 0;
+			int wyf_i = 0;
 
 			// 额外增加一次循环，为了将目前还没写结果的线程的结果整理好
 			for (batch_i = 0; batch_i < loop_size+1; batch_i++){
@@ -1638,17 +1638,17 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				fprintf(stderr, "[debug rank : %d] wake complete!\n", my_rank);
 				temp_wyf_offset = 0;
 #endif
-				for(i = 0; i < batch_size; i++){
+				for(wyf_i = 0; wyf_i < batch_size; wyf_i++){
 #ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] i : %d write result!!!!\n", my_rank, i);
+					fprintf(stderr, "[debug rank %d] wyf_i : %d write result!!!!\n", my_rank, wyf_i);
 #endif
 					if (temp_wyf_offset >= wyf_offset){break;}
-					temp_wyf_offset += decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[i]);
+					temp_wyf_offset += decode_mdbg(wyf_buffer+temp_wyf_offset, &wyf_mdbg[wyf_i]);
 #ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] i : %d decode over!!!!\n", my_rank, i);
-					fprintf(stderr, "[debug rank %d]  wyf_mdbg[%d].aux->hits->size : %u\n", my_rank, i, wyf_mdbg[i].aux->hits->size);
+					fprintf(stderr, "[debug rank %d] i : %d decode over!!!!\n", my_rank, wyf_i);
+					fprintf(stderr, "[debug rank %d]  wyf_mdbg[%d].aux->hits->size : %u\n", my_rank, wyf_i, wyf_mdbg[wyf_i].aux->hits->size);
 #endif
-					KBMAux *aux = wyf_mdbg[i].aux;
+					KBMAux *aux = wyf_mdbg[wyf_i].aux;
 					// if(g->corr_mode && mdbg->cc->cns->size){
 					// 	g->reads->buffer[mdbg->reg.rid].corr_bincnt = mdbg->cc->cns->size / KBM_BIN_SIZE;
 					// }
@@ -1686,7 +1686,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						chainning_hits_core(aux->hits, aux->cigars, g->uniq_hit, g->kbm->par->aln_var);
 					}
 #ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] i : %d: one_bitvec and chainning_hits_core!!!!\n", my_rank, i);
+					fprintf(stderr, "[debug rank %d] wyf_i : %d: one_bitvec and chainning_hits_core!!!!\n", my_rank, wyf_i);
 #endif
 					for(i=0;i<aux->hits->size;i++){
 						hit = ref_kbmmapv(aux->hits, i);
@@ -1713,18 +1713,17 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					// 	}
 					// }
 #ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] i : %d: map2rdhits_graph!!!!\n", my_rank, i);
+					fprintf(stderr, "[debug rank %d] wyf_i : %d: map2rdhits_graph!!!!\n", my_rank, wyf_i);
 #endif
-					free_kbmmapv(wyf_mdbg[i].aux->hits);
+					free_kbmmapv(wyf_mdbg[wyf_i].aux->hits);
 #ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] i : %d: free(wyf_mdbg[i].aux->hits);!!!!\n", my_rank, i);
+					fprintf(stderr, "[debug rank %d] wyf_i : %d: free(wyf_mdbg[i].aux->hits);!!!!\n", my_rank, wyf_i);
 #endif
-					free(wyf_mdbg[i].aux->cigars->bits);
-					free(wyf_mdbg[i].aux->cigars);
+					free_bitsvec(wyf_mdbg[wyf_i].aux->cigars);
 #ifdef DEBUG
-					fprintf(stderr, "[debug rank %d] i : %d: free(wyf_mdbg[i].aux->cigars);!!!!\n", my_rank, i);
+					fprintf(stderr, "[debug rank %d] wyf_i : %d: free(wyf_mdbg[i].aux->cigars);!!!!\n", my_rank, wyf_i);
 #endif
-					free(wyf_mdbg[i].aux);
+					free(wyf_mdbg[wyf_i].aux);
 				}
 			}
 			free(wyf_counts);
