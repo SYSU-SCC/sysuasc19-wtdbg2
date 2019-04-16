@@ -1701,7 +1701,7 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 					temp_wyf_offset += decode_mdbg(wyf_global_buffer+temp_wyf_offset, &wyf_mdbg[wyf_i]);
 #ifdef DEBUG
 					// fprintf(stderr, "[debug rank %d] i : %d decode over!!!!\n", my_rank, wyf_i);
-					fprintf(stderr, "[debug rank %d]  wyf_mdbg[%d].aux->hits->size : %u\n", my_rank, wyf_i, wyf_mdbg[wyf_i].aux->hits->size);
+					// fprintf(stderr, "[debug rank %d]  wyf_mdbg[%d].aux->hits->size : %u\n", my_rank, wyf_i, wyf_mdbg[wyf_i].aux->hits->size);
 #endif
 					KBMAux *aux = wyf_mdbg[wyf_i].aux;
 					// if(g->corr_mode && mdbg->cc->cns->size){
