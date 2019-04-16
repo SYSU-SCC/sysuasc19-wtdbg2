@@ -1,8 +1,11 @@
 VERSION=2.4
 RELEASE=20190312
 
-CC  := gcc
-CX := g++
+# CC  := gcc
+# CX := g++
+
+CC  := mpicc
+CX := mpiicpc
 
 BIN := /usr/local/bin
 
