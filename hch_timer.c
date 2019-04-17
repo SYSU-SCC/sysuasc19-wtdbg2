@@ -1,148 +1,274 @@
 #include <math.h>
-// #include <mpi.h>
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <sys/time.h>
 #include <unistd.h>
-
-#include "hch_timer.h"
-
-// int my_rank, comm_sz;
-
-
-// //MPF* 主核 profile 嵌套第*层
-
-// //使用hch_timer
-
-// #define MPF1_ALL                0
-// #define MPF1_RADIATION          1
-// #define MPF1_XTPV               2
-// #define MPF1_VAPSSM             3
-// #define MPF1_cam_run1           4
-// #define MPF1_HALO               5
-// #define TIMER_ALL                           0
-// #define TIMER_proc_alignments_core          1
-// #define TIMER_index_kbm                     2
-// #define TIMER_mdbg                          3
-// #define TIMER_write_alignment               4
-
-
-// //hch intel timer
-#if defined (__i386__)
-#define HCH_CC_TYPE unsigned long long
-#define CCPS 2900000000
-static __inline__ unsigned long long GetCycleCount(void)
-{
-        unsigned long long int x;
-        __asm__ volatile("rdtsc":"=A"(x));
-        return x;
-}
-#elif defined (__x86_64__)
-#define HCH_CC_TYPE unsigned long long
-#define CCPS 2900000000
-static __inline__ unsigned long long GetCycleCount(void)
-{
-        unsigned hi,lo;
-        __asm__ volatile("rdtsc":"=a"(lo),"=d"(hi));
-        return ((unsigned long long)lo)|(((unsigned long long)hi)<<32);
-}
-#elif (defined SW2) || (defined SW5)
-#define HCH_CC_TYPE unsigned long
-#define CCPS 1450000000
-static __inline__ unsigned long GetCycleCount(void)
-{
-    unsigned long time;
-    asm("rtc %0": "=r" (time) : );
-    return time;
-}
+#ifdef _OPENMP
+#include <omp.h>
 #endif
+int my_rank, comm_sz;
 
+
+//MPF* 主核 profile 嵌套第*层
+
+//使用hch_timer
+
+#define MPF1_ALL                0
+#define MPF1_RADIATION          1
+#define MPF1_XTPV               2
+#define MPF1_VAPSSM             3
+#define MPF1_cam_run1           4
+#define MPF1_HALO               5
+
+
+//hch intel timer
+#define MAX_HCH_TIMER_LEN 288
+#define HCH_TIMER_CNT 10
+
+// #if defined (__i386__)
+// #define LT_CCPSS 2900000000
+// static __inline__ unsigned long long GetCycleCount(void)
+// {
+//         unsigned long long int x;
+//         __asm__ volatile("rdtsc":"=A"(x));
+//         return x;
+// }
+// #elif defined (__x86_64__)
+// #define HCH_CC_TYPE unsigned long long
+// #define LT_CCPSS 2900000000
+// static __inline__ unsigned long long GetCycleCount(void)
+// {
+//         unsigned hi,lo;
+//         __asm__ volatile("rdtsc":"=a"(lo),"=d"(hi));
+//         return ((unsigned long long)lo)|(((unsigned long long)hi)<<32);
+// }
+// #elif (defined SW2) || (defined SW5)
 // #define HCH_CC_TYPE unsigned long
-static __inline__ HCH_CC_TYPE getmsTime(void)
-{
-    // struct timeval tv;
-    // gettimeofday(&tv,NULL);
-    // // printf("second:%ld\n",tv.tv_sec);  //秒
-    // // printf("millisecond:%ld\n",tv.tv_sec*1000 + tv.tv_usec/1000);  //毫秒
-    // // printf("microsecond:%ld\n",tv.tv_sec*1000000 + tv.tv_usec);  //微秒
-    // unsigned long time = tv.tv_sec*1000 + tv.tv_usec ;
-    // unsigned long time = tv.tv_sec*1000000 + tv.tv_usec;
-    // asm("rtc %0": "=r" (time) : );
-    
-    return GetCycleCount();
-}
+// #define LT_CCPSS 1450000000
+// static __inline__ unsigned long GetCycleCount(void)
+// {
+//     unsigned long time;
+//     asm("rtc %0": "=r" (time) : );
+//     return time;
+// }
+// #endif
 
-static __inline__ HCH_CC_TYPE getusTime(void)
+#define HCH_CC_TYPE unsigned long long
+static __inline__ unsigned long getmsTime(void)
 {
     struct timeval tv;
     gettimeofday(&tv,NULL);
     // printf("second:%ld\n",tv.tv_sec);  //秒
     // printf("millisecond:%ld\n",tv.tv_sec*1000 + tv.tv_usec/1000);  //毫秒
     // printf("microsecond:%ld\n",tv.tv_sec*1000000 + tv.tv_usec);  //微秒
-    // unsigned long time = tv.tv_sec*1000 + tv.tv_usec ;
-    HCH_CC_TYPE time = tv.tv_sec*1000 + tv.tv_usec;
+    unsigned long time = tv.tv_sec*1000 + tv.tv_usec/1000;
     // asm("rtc %0": "=r" (time) : );
     return time;
 }
 
-#define thread_num 36 
+HCH_CC_TYPE hch_call_counter[MAX_HCH_TIMER_LEN];
+HCH_CC_TYPE hch_cc[MAX_HCH_TIMER_LEN];
+HCH_CC_TYPE hch_tmp_cc[MAX_HCH_TIMER_LEN];
+char hch_timer_profile_name[40];
+char hch_counter_profile_name[40];
 
-HCH_CC_TYPE timer_cc[thread_num][timer_num];
-HCH_CC_TYPE timer_temp_cc[thread_num][timer_num];
+void hch_timer_init_()
+{
+    MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
 
-
-void lt_timer_init(){
-    int i=0;
-    int j=0;
-    for(i = 0; i < thread_num; i++){
-        for(j = 0; j < timer_num; j++)
-        {
-            timer_cc[i][j]=0;
-            timer_temp_cc[i][j]=0;
-        }
+    int i;
+    for(i = 0; i < MAX_HCH_TIMER_LEN; i++){
+        hch_cc[i] = 0;
+        hch_call_counter[i] = 0;
+    }
+    // 尝试使用PID环境变量给文件命名
+    char * pid_point = getenv("LID");
+    if (pid_point != NULL){
+        strcpy(hch_timer_profile_name, "hch_timer_profile.");
+        strcat(hch_timer_profile_name, pid_point);
+        strcat(hch_timer_profile_name, ".csv");
+        strcpy(hch_counter_profile_name, "hch_counter_profile.");
+        strcat(hch_counter_profile_name, pid_point);
+        strcat(hch_counter_profile_name, ".csv");
+        // printf("will be write hch_timer_profile in %s \n", hch_timer_profile_name);
+    }
+    else{
+        strcpy(hch_timer_profile_name, "hch_timer_profile");
+        strcat(hch_timer_profile_name, ".csv");
+        strcpy(hch_counter_profile_name, "hch_counter_profile");
+        strcat(hch_counter_profile_name, ".csv");
+        printf("WYF : ERROR : can not get LID environment variable! \n");
     }
 }
 
-void lt_timer_start(int num, int tid){
-    timer_temp_cc[tid][num]=GetCycleCount();
-}
-
-int lt_timer_stop(int num,int tid){
-    timer_cc[tid][num] += GetCycleCount() - timer_temp_cc[tid][num];
-    // if(num == 14 && tid ==0){
-    //     printf("%f\n", (GetCycleCount() - timer_temp_cc[tid][num]) * 1000.0/CCPS);
-    // }
-}
-
-void lt_timer_finalize(){
-    int i=0,j=0;
-    FILE * fp;
-    fp = fopen ("hch_timer_profile.csv", "w");
-    fprintf(fp, "all, proc_alignments_core, index_kbm, mdbg, write_alignment, changeRDFlag, chainning_hit, editGraph, result_time, loop_mdbg, clearkbm, query_index_kbm, map_kbm, sorthit_mat, push_kmer_match_kbm, map_kbm_pre,map_index_sort");
-    fprintf(fp, "\n");
-// #define TIMER_ALL                           0
-// #define TIMER_proc_alignments_core          1
-// #define TIMER_index_kbm                     2
-// #define TIMER_mdbg                          3
-// #define TIMER_write_alignment               4
-
-    // printf("%d,", my_rank);
-    // fprintf(fp, "%d,", 0);
-    for(i = 0; i < thread_num; i++){
-        for(j = 0; j < timer_num; j++)
+void hch_timer_finalize_()
+{
+    HCH_CC_TYPE sum_times[HCH_TIMER_CNT];
+    int i, j, k;
+    for (i = 0; i < HCH_TIMER_CNT; i++){
+        sum_times[i] = 0;
+    }
+    // 全局求和
+    // NOTE: MPI_UNSIGNED_LONG_LONG 可能不支持？？
+    MPI_Reduce(&hch_cc, &sum_times, HCH_TIMER_CNT, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    if(my_rank == 0)
+    {
+        printf("hch_timer_finalize_\n");
+        FILE * fp;
+        fp = fopen (hch_timer_profile_name, "w");
+        fprintf(fp, "my_rank, all");
+        fprintf(fp, "\n");
+        fprintf(fp, "average,");
+        for(j = 0; j < HCH_TIMER_CNT; j++)
         {
             // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
-            fprintf(fp, "%.4f,", timer_cc[i][j] * 1.0 / CCPS );
-        }    
+            fprintf(fp, "%.4f,", sum_times[j] * 1.0/comm_sz);
+        }
         fprintf(fp, "\n");
+        fflush(fp);
+        fclose(fp);
     }
-    fprintf(fp, "\n");
-    // printf("\n");
+    MPI_Barrier(MPI_COMM_WORLD);
+    for(i = 0; i < comm_sz; i++)
+    {
+        if(my_rank == i)
+        {
+            FILE * fp;
 
-    fflush(fp);
-    fclose(fp);
+            fp = fopen (hch_timer_profile_name, "a");
 
-    fflush(stdout);
+            // printf("%d,", my_rank);
+            fprintf(fp, "%d,", my_rank);
+
+            #ifndef HCH_TIMER_CNT
+            for(j = 0; j < MAX_HCH_TIMER_LEN; j++)
+            {
+                if(hch_cc[j] == 0)
+                    break;
+                // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
+                fprintf(fp, "%.4f,", hch_cc[j] * 1.0 );
+            }
+            #else
+            for(j = 0; j < HCH_TIMER_CNT; j++)
+            {
+                // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
+                fprintf(fp, "%.4f,", hch_cc[j] * 1.0 );
+            }
+            #endif
+
+            fprintf(fp, "\n");
+            // printf("\n");
+
+            fflush(fp);
+            fclose(fp);
+
+            fflush(stdout);
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    HCH_CC_TYPE sum_counters[HCH_TIMER_CNT];
+    for (i = 0; i < HCH_TIMER_CNT; i++){
+        sum_counters[i] = 0;
+    }
+    MPI_Reduce(&hch_call_counter, &sum_counters, HCH_TIMER_CNT, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+    if(my_rank == 0)
+    {
+        printf("hch_counter_finalize_\n");
+        FILE * fp;
+        fp = fopen (hch_counter_profile_name, "w");
+        fprintf(fp, "my_rank, all, outer mdbg loop");
+        fprintf(fp, "\n");
+        fprintf(fp, "average,");
+        for(j = 0; j < HCH_TIMER_CNT; j++)
+        {
+            // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
+            fprintf(fp, "%.4f,", sum_counters[j] * 1.0/comm_sz);
+        }
+        fprintf(fp, "\n");
+        fflush(fp);
+        fclose(fp);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    for(i = 0; i < comm_sz; i++)
+    {
+        if(my_rank == i)
+        {
+            FILE * fp;
+
+            fp = fopen (hch_counter_profile_name, "a");
+
+            // printf("%d,", my_rank);
+            fprintf(fp, "%d,", my_rank);
+
+            #ifndef HCH_TIMER_CNT
+            for(j = 0; j < MAX_HCH_TIMER_LEN; j++)
+            {
+                if(hch_cc[j] == 0)
+                    break;
+                // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
+                fprintf(fp, "%.4f,", hch_call_counter[j] * 1.0 );
+            }
+            #else
+            for(j = 0; j < HCH_TIMER_CNT; j++)
+            {
+                // printf("%.4f,", hch_cc[j] * 1.0 / LT_CCPSS);
+                fprintf(fp, "%.4f,", hch_call_counter[j] * 1.0 );
+            }
+            #endif
+
+            fprintf(fp, "\n");
+            // printf("\n");
+
+            fflush(fp);
+            fclose(fp);
+
+            fflush(stdout);
+        }
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+}
+
+void hch_timer_start_(int* num)
+{
+    //printf("my_rank = %d, num = %d\n", my_rank, *num);
+#ifdef _OPENMP
+    if(omp_get_thread_num()==0)
+#endif
+        hch_tmp_cc[*num] = (HCH_CC_TYPE)getmsTime();
+        hch_call_counter[*num] += (HCH_CC_TYPE)1;
+}
+
+
+void hch_timer_stop_(int* num)
+{
+    //printf("my_rank = %d, num = %d\n", my_rank, *num);
+#ifdef _OPENMP
+    if(omp_get_thread_num()==0)
+#endif
+        hch_cc[*num] += (HCH_CC_TYPE)getmsTime() - hch_tmp_cc[*num];
+}
+
+void hch_timer_start(int num)
+{
+    //printf("my_rank = %d, num = %d\n", my_rank, *num);
+#ifdef _OPENMP
+    if(omp_get_thread_num()==0)
+#endif
+        hch_tmp_cc[num] = (HCH_CC_TYPE)getmsTime();
+        hch_call_counter[num] += (HCH_CC_TYPE)1;
+}
+
+void hch_timer_stop(int num)
+{
+    //printf("my_rank = %d, num = %d\n", my_rank, *num);
+#ifdef _OPENMP
+    if(omp_get_thread_num()==0)
+#endif
+        hch_cc[num] += (HCH_CC_TYPE)getmsTime() - hch_tmp_cc[num];
 }

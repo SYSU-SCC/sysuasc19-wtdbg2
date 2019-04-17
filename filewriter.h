@@ -88,7 +88,7 @@ static inline void* _buffered_writer_thread_func(void *obj){
 			}
 			bw->flush = 0;
 		}
-		nano_sleep(10);
+		nano_sleep(1000);
 	}
 	{
 		bsize[0] = ftell(bw->bios[0]);

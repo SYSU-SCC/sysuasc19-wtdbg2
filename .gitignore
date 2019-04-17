@@ -2,9 +2,5 @@
 *.a
 .*.swp
 *.dSYM
-.vscode
+.vscode/
 wtdbg2
-wtdbg-cns
-wtpoa-cns
-pgzf
-kbm2

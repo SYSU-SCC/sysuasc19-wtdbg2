@@ -151,6 +151,7 @@ static inline uint64_t decode_##list_type(char* src,list_type* dest){ \
 	offset += (dest->n_head + dest->cap)*sizeof(e_type);  \
 	return offset; \
 }\
+	\
 static inline size_t list_type##_obj_desc_cnt(void *list, int idx){	\
 	if(idx == 0) return ((list_type*)list)->size * sizeof(e_type);	\
 	else return 0;	\
