@@ -1,6 +1,8 @@
 VERSION=2.3
-
-CC  := mpiicc
+# use gcc and intelmpi
+# module load intelcompiler/2018u4
+# CC  := mpiicc
+CC := mpicc -cc=gcc
 BIN := /usr/local/bin
 
 
