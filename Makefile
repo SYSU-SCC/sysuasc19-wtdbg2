@@ -3,26 +3,26 @@ RELEASE=20190312
 ifeq (0, ${MAKELEVEL})
 TIMESTAMP=$(shell date)
 endif
+BIN := /usr/local/bin
 
 # CC  := gcc
 # CX := g++
 
 # intel and intelmpi
 
+###############################################
 # CC  := mpiicc
 # CX := mpiicpc
-
-BIN := /usr/local/bin
-
-
-ifeq (1, ${DEBUG})
-CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O0 -DDEBUG=1 -DVERSION="$(VERSION)" -DRELEASE="$(RELEASE)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -xHost -O3 -msse4.2
-else
-CFLAGS=-g3 -w -Wall -Wno-unused-but-set-variable -DVERSION="$(VERSION)" -DRELEASE="$(RELEASE)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE  -xHost -O3  -msse4.2
-endif
+# ifeq (1, ${DEBUG})
+# CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O0 -DDEBUG=1 -DVERSION="$(VERSION)" -DRELEASE="$(RELEASE)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -xHost -O3 -msse4.2
+# else
+# CFLAGS=-g3 -w -Wall -Wno-unused-but-set-variable -DVERSION="$(VERSION)" -DRELEASE="$(RELEASE)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE  -xHost -O3  -msse4.2
+# endif
+##############################################
 
 # gcc and intelmpi
 
+##############################################
 CC := mpicc -cc=gcc
 CX := mpicxx -cxx=g++
 ifeq (1, ${DEBUG})
@@ -30,7 +30,7 @@ CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O0 -DDEBUG=1 -DVERSION="$(VERS
 else
 CFLAGS=-g3 -w -Wall -Wno-unused-but-set-variable -O4 -DVERSION="$(VERSION)" -DRELEASE="$(RELEASE)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE   -msse4.2
 endif
-
+##############################################
 
 
 CFLAGS+= -DLT_STLSORT -DHCH_TIMER
