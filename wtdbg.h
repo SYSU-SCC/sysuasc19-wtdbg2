@@ -725,7 +725,11 @@ if(mdbg->task == 1){
 		query_index_kbm(aux, NULL, reg->rid, kbm->rdseqs, kbm->reads->buffer[reg->rid].rdoff + reg->beg, reg->end - reg->beg);
 		map_kbm(aux);
 	}
+#ifndef LT_STLSORT
 	sort_array(aux->hits->buffer, aux->hits->size, kbm_map_t, num_cmpgt(b.mat, a.mat));
+#else
+	lt_sort_kbm_map_t_mat(aux->hits->buffer, aux->hits->size, 1);
+#endif
 }
 
 thread_end_loop(mdbg);
