@@ -116,11 +116,16 @@ int lt_timer_stop(int num,int tid){
     // }
 }
 
+void lt_count(int item, int tid, int num){
+    timer_cc[tid][item] +=num;
+}
+
 void lt_timer_finalize(){
     int i=0,j=0;
     FILE * fp;
     fp = fopen ("hch_timer_profile.csv", "w");
-    fprintf(fp, "all, proc_alignments_core, index_kbm, mdbg, write_alignment, changeRDFlag, chainning_hit, editGraph, result_time, loop_mdbg, clearkbm, query_index_kbm, map_kbm, sorthit_mat, push_kmer_match_kbm, map_kbm_pre,map_index_sort");
+    // fprintf(fp, "all, proc_alignments_core, index_kbm, mdbg, write_alignment, changeRDFlag, chainning_hit, editGraph, result_time, loop_mdbg, clearkbm, query_index_kbm, map_kbm, sorthit_mat, push_kmer_match_kbm, map_kbm_pre,map_index_sort");
+    fprintf(fp, "all, iter_ctgcns, mcns_inner_loop, end_tripog");
     fprintf(fp, "\n");
 // #define TIMER_ALL                           0
 // #define TIMER_proc_alignments_core          1

@@ -72,6 +72,8 @@ int usage(){
 }
 
 int main(int argc, char **argv){
+	lt_timer_init();
+	lt_timer_start(0,0);
 	POGPar par;
 	CTGCNS *cc;
 	SeqBank *refs;
@@ -240,5 +242,7 @@ int main(int argc, char **argv){
 	free_cplist(infs);
 	free_cplist(dbfs);
 	END_STAT_PROC_INFO(stderr);
+	lt_timer_stop(0,0);
+	lt_timer_finalize();
 	return 0;
 }

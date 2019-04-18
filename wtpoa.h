@@ -136,8 +136,11 @@ cigars[1] = NULL;
 xs[0] = &XX;
 xs[1] = NULL;
 thread_beg_loop(mcns);
+lt_timer_start(2,mcns->t_idx);
 if(g->seqs->nseq){
+	lt_timer_start(3,mcns->t_idx);
 	end_tripog(g);
+	lt_timer_stop(3,mcns->t_idx);
 }
 eidx = MAX_U4;
 thread_beg_syn(mcns);
@@ -179,6 +182,7 @@ if(eidx != MAX_U4){
 	ref_edgecnsv(cc->rs, eidx + 1)->beg = e;
 	thread_end_syn(mcns);
 }
+lt_timer_stop(2,mcns->t_idx);
 thread_end_loop(mcns);
 free_u1v(seq1);
 free_u1v(seq2);
@@ -295,6 +299,7 @@ static inline void print_lays_ctgcns(CTGCNS *cc, FILE *out){
 }
 
 static inline int iter_ctgcns(CTGCNS *cc){
+	lt_timer_start(1,0);
 	edge_cns_t *edge;
 	lay_blk_t *bk;
 	u4i i, nrun, eidx;
@@ -390,6 +395,7 @@ static inline int iter_ctgcns(CTGCNS *cc){
 					}
 					cc->bases += cc->cns->size;
 					thread_export(mcns, cc);
+					lt_timer_stop(1,0);
 					return 1;
 				}
 			}
@@ -446,6 +452,7 @@ static inline int iter_ctgcns(CTGCNS *cc){
 		}
 	}
 	thread_export(mcns, cc);
+	lt_timer_stop(1,0);
 	return 0;
 }
 

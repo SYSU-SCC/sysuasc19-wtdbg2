@@ -44,6 +44,14 @@ typedef struct {
 	int shuffle; // 0: no shuffling, 1: by kmer, 2, random
 } TriPOG;
 
+void encode_tripog(TriPOG* src, char* dest){
+
+}
+
+void decode_trip(char* src, TriPOG* dest){
+	
+}
+
 //static inline TriPOG* init_tripog(u4i seqmax, int refmode, int winlen, int winmin, int fail_skip, int M, int X, int I, int D, int W, int use_sse, int rW, u4i min_cnt, float min_freq){
 static inline TriPOG* init_tripog(u4i seqmax, int shuffle, int winlen, int winmin, int fail_skip, POGPar *par){
 	TriPOG *tp;
