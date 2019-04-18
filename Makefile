@@ -17,7 +17,7 @@ else
 CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O4 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2 -mavx
 # CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O4 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2 -D HCH_TIMER
 endif
-
+CFLAGS+= -DLT_STLSORT
 
 GLIBS=-lm -lrt -lpthread -lz -L./ -llt_sort
 GENERIC_SRC=mem_share.h chararray.h sort.h list.h pgzf.h  sort.h list.h dna.h thread.h filereader.h filewriter.h bitvec.h bit2vec.h bitsvec.h hashset.h
@@ -43,7 +43,7 @@ pgzf: mem_share.h sort.h list.h thread.h pgzf.h pgzf.c
 
 lt_sort.o:lt_sort.cpp
 	$(CX) $(CFLAGS) -c lt_sort.cpp -lm -lrt -lpthread -lz -std=c++11
-	
+
 ltsort.a:lt_sort.o
 	ar -crv liblt_sort.a lt_sort.o
 clean:
