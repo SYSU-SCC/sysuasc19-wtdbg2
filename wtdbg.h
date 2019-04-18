@@ -1422,8 +1422,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	int comm_sz = 0, my_rank = 0;
 	MPI_Comm_size(MPI_COMM_WORLD, &comm_sz);
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-	fprintf(stderr, "[debug] comm_sz : %d\n", comm_sz);
-	fprintf(stderr, "[debug] my_rank : %d\n", my_rank);
+	// fprintf(stderr, "[debug] comm_sz : %d\n", comm_sz);
+	// fprintf(stderr, "[debug] my_rank : %d\n", my_rank);
 #ifdef HCH_TIMER
 	hch_timer_start(1);
 #endif
@@ -1645,8 +1645,8 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 	}
 #ifdef HCH_TIMER
 	hch_timer_start(0);
-#endif
 	hch_timer_finalize_();
+#endif
 	MPI_Finalize();
 	if (my_rank != 0){
 		exit(0);

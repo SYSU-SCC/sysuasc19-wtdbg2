@@ -326,8 +326,8 @@ static inline int64_t mm_parse_num(const char *str)
 
 int main(int argc, char **argv){
 	MPI_Init(0,NULL);
-	hch_timer_init_();
 #ifdef HCH_TIMER
+	hch_timer_init_();
 	hch_timer_start(0);
 #endif
 	Graph *g;

@@ -6,7 +6,7 @@ set -x
 today=`date +%Y%m%d.%H%M%S`
 export LID=$today
 WTDBG_PATH=/nvme/liangt/wtdbg/wtdbg2.3-final
-CASE_INDEX=0
+CASE_INDEX=1
 NUM_THREADS=32
 DATA_PATH=/nvme/wtdbgdata
 MPI_RUN="mpirun -n 4 -genv I_MPI_FABRICS shm:ofa -machinefile machinefile "

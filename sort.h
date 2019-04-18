@@ -201,22 +201,9 @@ do {	\
 	}	\
 } while(0)
 
-static __inline__ unsigned long p_getmsTime(void)
-{
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    // printf("second:%ld\n",tv.tv_sec);  //秒
-    // printf("millisecond:%ld\n",tv.tv_sec*1000 + tv.tv_usec/1000);  //毫秒
-    // printf("microsecond:%ld\n",tv.tv_sec*1000000 + tv.tv_usec);  //微秒
-    unsigned long time = tv.tv_sec*1000 + tv.tv_usec/1000;
-    // asm("rtc %0": "=r" (time) : );
-    return time;
-}
-
 // Must #include "thread.h" and "list.h"
 #define psort_array(rs_ary, rs_size, e_type, ncpu, is_a_greater_than_b)	\
 do {	\
-	unsigned long long pre = p_getmsTime(); \
 	thread_beg_def(psrt);	\
 	e_type *rs;	\
 	size_t beg, end, div;	\
@@ -282,7 +269,6 @@ do {	\
 	thread_end_close(psrt);	\
 	free_u64list(stacks[0]);	\
 	free_u64list(stacks[1]);	\
-	fprintf(stderr,"tiemr: %llu\n", p_getmsTime()-pre);		\
 } while(0); \
 
 #define quick_median_array(_rs, _rs_size, e_type, expr)	\
