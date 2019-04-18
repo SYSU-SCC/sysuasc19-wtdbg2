@@ -653,6 +653,50 @@ FILE *alno;
 int task;
 thread_end_def(mdbg);
 
+static uint64_t encode_char(char* str,char* dst)
+{
+	uint32_t len=0;
+	uint64_t offset=0;	
+	len=strlen(str);
+	memcpy(dst+offset,&len,sizeof(uint32_t));
+	offset+=sizeof(uint32_t);
+	memcpy(dst+offset,str,sizeof(char)*len);
+	offset+=sizeof(char)*len;
+	return offset;
+}
+static uint64_t decode_char(char* str, char** dst)
+{
+	
+	uint64_t offset=0;
+	uint32_t len;
+	memcpy(&len,str+offset,sizeof(uint32_t));
+	offset+=sizeof(uint32_t);
+	*dst=(char*)malloc((len+2)*sizeof(char));
+	memcpy(*dst,str+offset,sizeof(char)*len);
+	offset+=sizeof(char)*len;
+	(*dst)[len]='\0';
+	return offset;
+}
+
+static uint64_t encode_String(String* ori, char* dest)
+{
+	uint64_t offset=0;
+	memcpy(dest+offset, ori, sizeof(String));
+	offset+=sizeof(String);
+	memcpy(dest+offset, ori->buffer, sizeof(char)*ori->capacity);
+	offset+=ori->capacity*sizeof(char);
+	return offset;
+}
+static uint64_t decode_String(char* ori, String* dest)
+{
+	uint64_t offset=0;
+	memcpy(dest, ori+offset, sizeof(String));
+	offset+=sizeof(String);
+	dest->buffer=malloc((dest->capacity)*sizeof(char));
+	memcpy(dest->buffer,ori+offset, sizeof(char)*dest->capacity);
+	offset+=dest->capacity*sizeof(char);
+	return offset;
+}
 
 static uint64_t encode_aux(KBMAux * ori, char * buffer){
 	// fprintf(stderr, "[debug] encode_aux\n");
@@ -661,6 +705,9 @@ static uint64_t encode_aux(KBMAux * ori, char * buffer){
 	offset += sizeof(KBMAux);
 	offset += encode_kbmmapv(ori->hits, buffer+offset);
 	offset += encode_bitsvec(ori->cigars, buffer+offset);
+	offset += encode_char(ori->qtag,buffer+offset);
+	offset += encode_String(ori->str, buffer+offset);
+	
 	return offset;
 }
 
@@ -672,6 +719,9 @@ static uint64_t decode_aux(char * buffer, KBMAux * dest){
 	offset += decode_kbmmapv(buffer+offset, dest->hits);
 	dest->cigars = calloc(1, sizeof(BitsVec));
 	offset += decode_bitsvec(buffer+offset, dest->cigars);
+	offset += decode_char(buffer+offset, &(dest->qtag));
+	dest->str = (String*)malloc(sizeof(String));
+	offset += decode_String(buffer+offset, dest->str);
 	return offset;
 }
 
@@ -1578,7 +1628,15 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 				if (temp_wyf_offset >= sum_offset){break;}
 				temp_wyf_offset += decode_mdbg(wyf_global_buffer+temp_wyf_offset ,&wyf_mdbg[rid]);
 				KBMAux *aux = wyf_mdbg[rid].aux;
-
+				if(alno&&my_rank==0){
+					aux->kbm=g->kbm;
+					beg_bufferedwriter(bw);
+					for(i=0;i<aux->hits->size;i++){
+						hit = ref_kbmmapv(aux->hits, i);
+						fprint_hit_kbm(aux, i, bw->out);
+					}
+					end_bufferedwriter(bw);
+				}
 				for(i=0;i<aux->hits->size;i++){
 					hit = ref_kbmmapv(aux->hits, i);
 					if(hit->mat == 0) continue;
@@ -1605,10 +1663,13 @@ static inline u8i proc_alignments_core(Graph *g, int ncpu, int raw, rdregv *regs
 						map2rdhits_graph(g, hit);
 					}
 				}
+				//fprintf(stderr,"FAXIANWENTi\n");
 				free(wyf_mdbg[rid].aux->hits->buffer);
 				free(wyf_mdbg[rid].aux->hits);
 				free(wyf_mdbg[rid].aux->cigars->bits);
 				free(wyf_mdbg[rid].aux->cigars);
+				free_string(wyf_mdbg[rid].aux->str);
+				free(wyf_mdbg[rid].aux->qtag);
 				free(wyf_mdbg[rid].aux);
 			}
 		}
