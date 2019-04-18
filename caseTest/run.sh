@@ -1,6 +1,6 @@
 #!/bin/bash
-$module load nvme/impi/2019.3
-$module load nvme/gcc/8.3.0
+module load nvme/impi/2019.3
+module load nvme/gcc/8.3.0
 
 set -x
 today=`date +%Y%m%d.%H%M%S`
