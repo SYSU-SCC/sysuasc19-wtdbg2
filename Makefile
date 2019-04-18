@@ -3,7 +3,7 @@ VERSION=2.3
 # module load intelcompiler/2018u4
 # CC  := mpiicc
 CC := mpicc -cc=gcc
-CX := mpiicc -cxx=g++
+CX := mpicxx -cxx=g++
 BIN := /usr/local/bin
 
 
@@ -14,7 +14,7 @@ endif
 ifeq (1, ${DEBUG})
 CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O0 -DDEBUG=1 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE
 else
-CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O4 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2 -mavx
+CFLAGS=-g3 -w -Wall -Wno-unused-but-set-variable -O4 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2 -mavx
 # CFLAGS=-g3 -W -Wall -Wno-unused-but-set-variable -O4 -DTIMESTAMP="$(TIMESTAMP)" -D_FILE_OFFSET_BITS=64 -D_GNU_SOURCE -mpopcnt -msse4.2 -D HCH_TIMER
 endif
 CFLAGS+= -DLT_STLSORT

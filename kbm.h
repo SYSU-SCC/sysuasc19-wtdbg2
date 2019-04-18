@@ -1332,7 +1332,11 @@ static inline void query_index_kbm(KBMAux *aux, char *qtag, u4i qidx, BaseBank *
 	}
 	if(par->self_aln && aux->solids){
 		// Obsolete
+#ifndef LT_STLSORT
 		sort_array(aux->refs->buffer, aux->refs->size, kbm_ref_t, num_cmpgt(a.off, b.off));
+#else
+		lt_sort_kbm_ref_t_off(aux->refs->buffer, aux->refs->size, 1);
+#endif
 		tot = 0;
 		next = 0;
 		for(i=0;i<aux->refs->size;i++){
@@ -1350,7 +1354,11 @@ static inline void query_index_kbm(KBMAux *aux, char *qtag, u4i qidx, BaseBank *
 			}
 		}
 	} else if(aux->par->ksampling < KBM_BIN_SIZE && aux->refs->size){
+#ifndef LT_STLSORT
 		sort_array(aux->refs->buffer, aux->refs->size, kbm_ref_t, num_cmpgtx(a.qbidx, b.qbidx, b.bend - b.boff, a.bend - a.boff));
+#else
+		lt_sort_kbm_ref_t_qbidx(aux->refs->buffer, aux->refs->size, 1);
+#endif
 		tot = 0;
 		for(i=j=0;i<aux->refs->size;i++){
 			if(aux->refs->buffer[i].qbidx != aux->refs->buffer[j].qbidx){
@@ -1372,7 +1380,11 @@ static inline void query_index_kbm(KBMAux *aux, char *qtag, u4i qidx, BaseBank *
 		}
 		//sort_array(aux->refs->buffer, aux->refs->size, kbm_ref_t, num_cmpgt(a.off, b.off));
 	}
+#ifndef LT_STLSORT
 	sort_array(aux->refs->buffer, aux->refs->size, kbm_ref_t, num_cmpgt(a.off, b.off));
+#else
+	lt_sort_kbm_ref_t_off(aux->refs->buffer, aux->refs->size,1);
+#endif
 	// estimate binmap
 	aux->bmoff = 0;
 	if(aux->refs->size){
