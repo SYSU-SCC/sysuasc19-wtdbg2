@@ -1,3 +1,25 @@
+# SYSU ASC19
+中山大学ASC19    
+code在分支上查看，或者下载release
+
+## 主要改动： 
+1. 使用mpi扩展原本mdbg部分线程池操作
+2. 使用stl sort替换作者手写的sort
+
+## 效果：  
+在大算例上，使用stl sort 得到1.2x得加速比，mpi使得mdbg部分得到很好的扩展性，在2节点时Human NA24385算例达到接近1.8x得加速比，4节点也有3.2x得加速比。  
+然而在小算例上效果很差，会变慢。因为多了同步和通信操作，而且本来得计算也不多，任务稀疏，这个时候不会有什么好的效果。~~所以比赛现场gg了~~   
+
+## 原版
+来自ruanjie的[wtdbg2](https://github.com/ruanjue/wtdbg2)
+
+----
+
+华丽分割
+
+----
+
+
 ## <a name="update"></a>Updates
 * wtdbg 2.3 2018-12-23<br>
 No limitation on read length and read count.
